@@ -1,15 +1,20 @@
 #include <gtest/gtest.h>
 #include <opencv2/highgui/highgui.hpp>
 
+#include "ros/package.h"
+
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
+#include "sensor_msgs/CameraInfo.h"
+#include "image_geometry/stereo_camera_model.h"
+
 
 using namespace stereo_feature_extraction;
 
 TEST(StereoFeatureExtractor, runTest)
 {
-    cv::Mat image_left(240, 320, CV_8UC3);
-    cv::Mat image_right(240, 320, CV_8UC3);
+    cv::Mat image_left(768, 1024, CV_8UC3);
+    cv::Mat image_right(768, 1024, CV_8UC3);
 
     //cv::randu(image_left, cv::Scalar(0, 0, 0), cv::Scalar(50, 50, 50));
     //cv::randu(image_right, cv::Scalar(0, 0, 0), cv::Scalar(50, 50, 50));
@@ -21,8 +26,15 @@ TEST(StereoFeatureExtractor, runTest)
 
     FeatureExtractor::Ptr feature_extractor = 
         FeatureExtractorFactory::create("CvSURF");
+
+    // read calibration data to fill stereo camera model
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+    std::string left_file = path + "/data/artificial_calibration_left.yaml";
+    std::string right_file = path + "/data/artificial_calibration_right.yaml";
+
     StereoCameraModel::Ptr stereo_camera_model = 
         StereoCameraModel::Ptr(new StereoCameraModel());
+    stereo_camera_model->fromCalibrationFiles(left_file, right_file);
     StereoFeatureExtractor extractor(feature_extractor, stereo_camera_model);
 
     cv::Mat mask_left, mask_right;

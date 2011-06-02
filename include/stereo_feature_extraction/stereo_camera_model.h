@@ -22,6 +22,15 @@ class StereoCameraModel
     StereoCameraModel();
 
     /**
+    * Reads calibration info from given files to initialize the model.
+    * The files must be in ini or yaml format.
+    * \param calibration_file_left calibration file for left camera
+    * \param calibration_file_right calibration file for right camera
+    */
+    void fromCalibrationFiles(const std::string& calibration_file_left,
+            const std::string& calibration_file_right);
+
+    /**
     * Computes the 3d position of a matching point pair,
     * using the camera model and the disparity of given points
     * \param left_uv_rect point in the left rectified image

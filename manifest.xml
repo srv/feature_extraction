@@ -13,6 +13,7 @@
   <depend package="cv_bridge"/>
   <depend package="roscpp"/>
   <depend package="image_geometry" />
+  <depend package="camera_calibration_parsers" />
 
 </package>
 
