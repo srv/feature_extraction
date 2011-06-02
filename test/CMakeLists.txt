@@ -1,0 +1,8 @@
+include_directories(../include/stereo_feature_extraction)
+
+rosbuild_add_gtest(stereo_feature_extractor_test stereo_feature_extractor_test.cpp)
+rosbuild_add_gtest(feature_extractors_test feature_extractors_test.cpp)
+
+target_link_libraries(stereo_feature_extractor_test stereo_feature_extraction)
+target_link_libraries(feature_extractors_test stereo_feature_extraction)
+
