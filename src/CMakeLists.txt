@@ -1,1 +1,2 @@
 add_subdirectory(stereo_feature_extraction)
+add_subdirectory(nodelets)

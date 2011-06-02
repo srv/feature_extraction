@@ -11,9 +11,13 @@
 
   <depend package="opencv2"/>
   <depend package="cv_bridge"/>
+  <depend package="image_transport"/>
+  <depend package="image_proc"/>
   <depend package="roscpp"/>
   <depend package="image_geometry" />
   <depend package="camera_calibration_parsers" />
+  <depend package="pluginlib" />
+  <depend package="nodelet" />
 
 </package>
 
