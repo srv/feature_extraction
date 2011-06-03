@@ -1,0 +1,10 @@
+<library path="lib/libstereo_feature_extraction">
+  <class name="stereo_feature_extraction/stereo_feature_extractor" 
+         type="stereo_feature_extraction::StereoFeatureExtractorNodelet" 
+         base_class_type="nodelet::Nodelet">
+  <description>
+    Nodelet that extracts SURF stereo features and publishes them as 
+    PointCloud2 message.
+  </description>
+  </class>
+</library>

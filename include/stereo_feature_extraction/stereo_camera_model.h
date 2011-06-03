@@ -4,6 +4,12 @@
 #include <boost/shared_ptr.hpp>
 #include <image_geometry/stereo_camera_model.h>
 
+namespace sensor_msgs
+{
+    template <class ContainerAllocator> struct CameraInfo_;
+    typedef  ::sensor_msgs::CameraInfo_<std::allocator<void> > CameraInfo;
+}
+
 namespace stereo_feature_extraction
 {
 
@@ -29,6 +35,14 @@ class StereoCameraModel
     */
     void fromCalibrationFiles(const std::string& calibration_file_left,
             const std::string& calibration_file_right);
+
+    /**
+    * Reads camera info messages to initialize the model.
+    * \param camera_info_left left camera info
+    * \param camera_info_right right camera info
+    */
+    void fromCameraInfo(const sensor_msgs::CameraInfo& camera_info_left,
+            const sensor_msgs::CameraInfo& camera_info_right);
 
     /**
     * Computes the 3d position of a matching point pair,
