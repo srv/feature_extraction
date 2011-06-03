@@ -19,6 +19,9 @@
   <depend package="pluginlib" />
   <depend package="nodelet" />
 
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
 </package>
 
 

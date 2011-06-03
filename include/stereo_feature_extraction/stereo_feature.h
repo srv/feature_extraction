@@ -1,6 +1,7 @@
 #ifndef STEREO_FEATURE_H
 #define STEREO_FEATURE_H
 
+#include <iostream>
 #include <opencv2/core/core.hpp>
 
 #include "key_point.h"
@@ -19,7 +20,11 @@ struct StereoFeature
     cv::Vec3b color;
 };
 
+
 }
+
+std::ostream& operator<<(std::ostream& ostream,
+        const stereo_feature_extraction::StereoFeature& feature);
 
 #endif
 

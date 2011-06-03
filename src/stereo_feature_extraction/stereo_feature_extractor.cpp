@@ -36,7 +36,6 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
 
     std::vector<cv::DMatch> matches;
     crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);
-    cv::imshow("match mask", match_mask);
 
     std::vector<StereoFeature> stereo_features(matches.size());
     for (size_t i = 0; i < matches.size(); ++i)
@@ -78,10 +77,11 @@ void StereoFeatureExtractor::computeMatchMask(
             const KeyPoint& keypoint1 = key_points_left[c];
             const KeyPoint& keypoint2 = key_points_right[r];
             double y_diff = fabs(keypoint1.pt.y - keypoint2.pt.y);
+            double disparity = keypoint1.pt.x - keypoint2.pt.x;
             double angle_diff = std::abs(keypoint1.angle - keypoint2.angle);
             angle_diff = std::min(360 - angle_diff, angle_diff);
             int size_diff = std::abs(keypoint1.size - keypoint2.size);
-            if (y_diff <= max_y_diff && angle_diff <= max_angle_diff && 
+            if (y_diff <= max_y_diff && disparity > 0 && angle_diff <= max_angle_diff && 
                 keypoint1.octave == keypoint2.octave && size_diff <= max_size_diff)
             {
                 match_mask.at<unsigned char>(r, c) = 255;
@@ -94,6 +94,7 @@ void StereoFeatureExtractor::computeMatchMask(
     }
 }
 
+// TODO remove distance threshold hack!!
 void StereoFeatureExtractor::crossCheckMatching(
                             const cv::Mat& descriptors_left, 
                             const cv::Mat& descriptors_right,
@@ -101,7 +102,7 @@ void StereoFeatureExtractor::crossCheckMatching(
                             const cv::Mat& match_mask)
 {
     matches.clear();
-    int knn = 3;
+    int knn = 1;
     cv::Ptr<cv::DescriptorMatcher> descriptor_matcher = 
         cv::DescriptorMatcher::create("BruteForce");
     std::vector<std::vector<cv::DMatch> > matches_left2right, matches_right2left;
@@ -109,6 +110,7 @@ void StereoFeatureExtractor::crossCheckMatching(
             matches_left2right, knn, match_mask.t());
     descriptor_matcher->knnMatch(descriptors_right, descriptors_left,
             matches_right2left, knn, match_mask);
+    static double DISTANCE_THRESHOLD = 0.5;
     for (size_t m = 0; m < matches_left2right.size(); m++ )
     {
         bool cross_check_found = false;
@@ -121,8 +123,11 @@ void StereoFeatureExtractor::crossCheckMatching(
                 const cv::DMatch& backward = matches_right2left[forward.trainIdx][bk];
                 if( backward.trainIdx == forward.queryIdx )
                 {
-                    matches.push_back(forward);
-                    cross_check_found = true;
+                    if (forward.distance < DISTANCE_THRESHOLD)
+                    {
+                        matches.push_back(forward);
+                        cross_check_found = true;
+                    }
                     break;
                 }
             }

@@ -13,36 +13,41 @@
 #include <image_geometry/stereo_camera_model.h>
 
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/image_encodings.h>
+
+#include <cv_bridge/cv_bridge.h>
 
 #include "stereo_camera_model.h"
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
 
+
+
 namespace stereo_feature_extraction
 {
 
-class StereoFeatureExtractionNodelet : public nodelet::Nodelet
+class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 {
   public:
-    StereoFeatureExtractionNodelet() :
+    StereoFeatureExtractorNodelet() :
         stereo_camera_model_(new StereoCameraModel()),
         stereo_feature_extractor_(FeatureExtractorFactory::create("CvSURF"),
                                   stereo_camera_model_)
-    {}
+    { }
+
 
   private:
     virtual void onInit()
     {
         ros::NodeHandle nh = getNodeHandle();
         ros::NodeHandle& private_nh = getPrivateNodeHandle();
-        pub = private_nh.advertise<std_msgs::Float64>("out", 10);
         it_.reset(new image_transport::ImageTransport(nh));
         subscribed_ = false; // no subscription yet
         
         ros::SubscriberStatusCallback connect_cb = 
-            boost::bind(&StereoFeatureExtractionNodelet::connectCb, this);
+            boost::bind(&StereoFeatureExtractorNodelet::connectCb, this);
 
-        pub_points2_  = nh.advertise<PointCloud2>("stereo_features",  1, 
+        pub_points2_  = nh.advertise<sensor_msgs::PointCloud2>("stereo_features",  1, 
                 connect_cb, connect_cb);
 
         // Synchronize inputs. Topic subscriptions happen on demand in the 
@@ -51,6 +56,14 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
         private_nh.param("queue_size", queue_size, 5);
         bool approx;
         private_nh.param("approximate_sync", approx, false);
+
+        private_nh.param("max_y_diff", max_y_diff_, 2.0);
+        private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
+        private_nh.param("max_size_diff", max_size_diff_, 2);
+
+        std::cout << "Parameters: max_y_diff = " << max_y_diff_
+                  << " max_angle_diff = " << max_angle_diff_
+                  << " max_size_diff = " << max_size_diff_ << std::endl;
         if (approx)
         {
             approximate_sync_.reset(
@@ -58,7 +71,7 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
                                         sub_l_image_, sub_r_image_,
                                         sub_l_info_, sub_r_info_));
             approximate_sync_->registerCallback(
-                    boost::bind(&StereoFeatureExtractionNodelet::imageCb,
+                    boost::bind(&StereoFeatureExtractorNodelet::imageCb,
                                 this, _1, _2, _3, _4));
         }
         else
@@ -67,19 +80,12 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
                                             sub_l_image_, sub_r_image_,
                                             sub_l_info_, sub_r_info_));
             exact_sync_->registerCallback(
-                    boost::bind(&StereoFeatureExtractionNodelet::imageCb,
+                    boost::bind(&StereoFeatureExtractorNodelet::imageCb,
                                 this, _1, _2, _3, _4));
         }
 
-        // Print a warning every 10 seconds until the input topics are advertised
-        ros::V_string topics;
-        topics.push_back("left/image_rect_color");
-        topics.push_back("right/image_rect_color");
-        topics.push_back("left/camera_info");
-        topics.push_back("right/camera_info");
-        check_inputs_.reset(new image_proc::AdvertisementChecker(nh, getName()));
-        check_inputs_->start(topics, 60.0);
-
+        NODELET_INFO("Waiting for client subscriptions.");
+        std::cout << "Waiting for client subscriptions." << std::endl;
     }
 
     // Handles (un)subscribing when clients (un)subscribe
@@ -87,6 +93,8 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
     {
         if (pub_points2_.getNumSubscribers() == 0)
         {
+            NODELET_INFO("No more clients connected, unsubscribing from camera.");
+            std::cout << "No more clients connected, unsubscribing from camera." << std::endl;
             sub_l_image_  .unsubscribe();
             sub_r_image_  .unsubscribe();
             sub_l_info_   .unsubscribe();
@@ -95,6 +103,8 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
         }
         else if (!subscribed_)
         {
+            NODELET_INFO("Client connected, subscribing to camera.");
+            std::cout << "Client connected, subscribing to camera." << std::endl;
             ros::NodeHandle &nh = getNodeHandle();
             // Queue size 1 should be OK; the one that matters is the synchronizer queue size.
             sub_l_image_  .subscribe(*it_, "left/image_rect_color", 1);
@@ -105,21 +115,19 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
         }
     }
 
-    void imageCb(const ImageConstPtr& l_image_msg,
-                 const ImageConstPtr& r_image_msg,
-                 const CameraInfoConstPtr& l_info_msg,
-                 const CameraInfoConstPtr& r_info_msg)
+    void imageCb(const sensor_msgs::ImageConstPtr& l_image_msg,
+                 const sensor_msgs::ImageConstPtr& r_image_msg,
+                 const sensor_msgs::CameraInfoConstPtr& l_info_msg,
+                 const sensor_msgs::CameraInfoConstPtr& r_info_msg)
     {
-        // Update the camera model
-        stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
-
         // bridge to opencv
-        cv_bridge::CvImagePtr cv_ptr_left;
-        cv_bridge::CvImagePtr cv_ptr_right;
+        namespace enc = sensor_msgs::image_encodings;
+        cv_bridge::CvImageConstPtr cv_ptr_left;
+        cv_bridge::CvImageConstPtr cv_ptr_right;
         try
         {
             cv_ptr_left = cv_bridge::toCvShare(l_image_msg, enc::BGR8);
-            cv_ptr_right = cv_bridge::toCvShare(l_image_msg, enc::BGR8);
+            cv_ptr_right = cv_bridge::toCvShare(r_image_msg, enc::BGR8);
         }
         catch (cv_bridge::Exception& e)
         {
@@ -128,37 +136,41 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
         }
 
         // Calculate stereo features
-        double max_y_diff = 5;
-        double max_angle_diff = 5;
-        double max_size_diff = 2;
+        // Update the camera model
+        stereo_camera_model_->fromCameraInfo(*l_info_msg, *r_info_msg);
         cv::Mat mask;
-        std::vector<StereoFeature> stereo_features = stereo_feature_extractor_->extract(
+        std::vector<StereoFeature> stereo_features = stereo_feature_extractor_.extract(
             cv_ptr_left->image, cv_ptr_right->image, mask, mask, 
-            max_y_diff, max_angle_diff, max_size_diff);
+            max_y_diff_, max_angle_diff_, max_size_diff_);
 
-/*
+        NODELET_INFO("%i stereo features", stereo_features.size());
+        std::cout << stereo_features.size() << " stereo features" << std::endl;
+
+        /*
         // Fill in new PointCloud2 message (2D image-like layout)
-        PointCloud2Ptr points_msg = boost::make_shared<PointCloud2>();
+        sensor_msgs::PointCloud2Ptr points_msg = 
+            boost::make_shared<sensor_msgs::PointCloud2>();
         points_msg->header = l_image_msg->header;
+
         points_msg->height = stereo_features.size();
         points_msg->width  = 1;
-        points_msg->fields.resize (4);
+        points_msg->fields.resize(4);
         points_msg->fields[0].name = "x";
         points_msg->fields[0].offset = 0;
         points_msg->fields[0].count = 1;
-        points_msg->fields[0].datatype = PointField::FLOAT32;
+        points_msg->fields[0].datatype = sensor_msgs::PointField::FLOAT32;
         points_msg->fields[1].name = "y";
         points_msg->fields[1].offset = 4;
         points_msg->fields[1].count = 1;
-        points_msg->fields[1].datatype = PointField::FLOAT32;
+        points_msg->fields[1].datatype = sensor_msgs::PointField::FLOAT32;
         points_msg->fields[2].name = "z";
         points_msg->fields[2].offset = 8;
         points_msg->fields[2].count = 1;
-        points_msg->fields[2].datatype = PointField::FLOAT32;
+        points_msg->fields[2].datatype = sensor_msgs::PointField::FLOAT32;
         points_msg->fields[3].name = "rgb";
         points_msg->fields[3].offset = 12;
         points_msg->fields[3].count = 1;
-        points_msg->fields[3].datatype = PointField::FLOAT32;
+        points_msg->fields[3].datatype = sensor_msgs::PointField::FLOAT32;
         static const int STEP = 16;
         points_msg->point_step = STEP;
         points_msg->row_step = points_msg->point_step * points_msg->width;
@@ -167,6 +179,23 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
 
         float bad_point = std::numeric_limits<float>::quiet_NaN ();
         int offset = 0;
+
+        for (size_t i = 0; i < stereo_features.size(); ++i)
+        {
+            int offset = i * points_msg->point_step;
+            const cv::Point3d& point = stereo_features[i].world_point;
+            float x = point.x;
+            float y = point.y;
+            float z = point.z;
+            // pack data into point message data
+            memcpy (&points_msg->data[offset + 0], &x, sizeof (float));
+            memcpy (&points_msg->data[offset + 4], &y, sizeof (float));
+            memcpy (&points_msg->data[offset + 8], &z, sizeof (float));
+            if (i == 0) 
+                std::cout << "first feature: " << stereo_features[i] << std::endl;
+        }
+    */
+        /*
         for (int v = 0; v < mat.rows; ++v)
         {
         for (int u = 0; u < mat.cols; ++u, offset += STEP)
@@ -264,16 +293,20 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
         }
 
         pub_points2_.publish(points_msg);
-*/
         }
 
+*/
+//        pub_points2_.publish(points_msg);
     }
 
+    boost::shared_ptr<image_transport::ImageTransport> it_;
     image_transport::SubscriberFilter sub_l_image_;
     image_transport::SubscriberFilter sub_r_image_;
-    message_filters::Subscriber<CameraInfo> sub_l_info_, sub_r_info_;
-    typedef ExactTime<Image, Image, CameraInfo, CameraInfo> ExactPolicy;
-    typedef ApproximateTime<Image, Image, CameraInfo, CameraInfo> ApproximatePolicy;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> sub_l_info_, sub_r_info_;
+    typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
+        sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> ExactPolicy;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, 
+        sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> ApproximatePolicy;
     typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
     typedef message_filters::Synchronizer<ApproximatePolicy> ApproximateSync;
     boost::shared_ptr<ExactSync> exact_sync_;
@@ -295,11 +328,16 @@ class StereoFeatureExtractionNodelet : public nodelet::Nodelet
 
     // the extractor
     StereoFeatureExtractor stereo_feature_extractor_;
+
+    // matching parameters
+    double max_y_diff_;
+    double max_angle_diff_;
+    int max_size_diff_;
  
 };
 
 PLUGINLIB_DECLARE_CLASS(stereo_feature_extraction, 
-    StereoFeatureExtractionNodelet, 
-    stereo_feature_extraction::StereoFeatureExtractionNodelet, nodelet::Nodelet);
+    stereo_feature_extractor, 
+    stereo_feature_extraction::StereoFeatureExtractorNodelet, nodelet::Nodelet);
 }
 

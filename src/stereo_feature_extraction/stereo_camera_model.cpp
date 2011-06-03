@@ -2,6 +2,8 @@
 #include "stereo_camera_model.h"
 #include "camera_calibration_parsers/parse.h"
 
+#include "sensor_msgs/CameraInfo.h"
+
 using namespace stereo_feature_extraction;
 
 StereoCameraModel::StereoCameraModel()
@@ -21,6 +23,14 @@ void StereoCameraModel::fromCalibrationFiles(
     camera_calibration_parsers::readCalibration(
             calibration_file_right, right_name, camera_info_right);
 
+    model_.fromCameraInfo(camera_info_left, camera_info_right);
+}
+
+
+void StereoCameraModel::fromCameraInfo(
+        const sensor_msgs::CameraInfo& camera_info_left,
+        const sensor_msgs::CameraInfo& camera_info_right)
+{
     model_.fromCameraInfo(camera_info_left, camera_info_right);
 }
 
