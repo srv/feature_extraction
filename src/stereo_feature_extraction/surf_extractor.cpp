@@ -1,14 +1,14 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "cv_surf_extractor.h"
+#include "surf_extractor.h"
 
 using namespace stereo_feature_extraction;
 
-CvSurfExtractor::CvSurfExtractor()
+SurfExtractor::SurfExtractor()
 {
 }
 
-void CvSurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
+void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
         std::vector<KeyPoint>& key_points,
         cv::Mat& descriptors)
 {
@@ -24,18 +24,14 @@ void CvSurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
         gray_image = image;
     }
 
-    std::vector<float> descriptor_data;
     std::vector<cv::KeyPoint> cv_key_points;
-    surf_(gray_image, mask, cv_key_points, descriptor_data);
+    //odometry::Surf surf;
+    //surf(gray_image, mask, cv_key_points, descriptors);
+    surf_(gray_image, mask, cv_key_points, descriptors);
 
     key_points.resize(cv_key_points.size());
     for (size_t i = 0; i < cv_key_points.size(); ++i)
     {
         key_points[i] = KeyPoint(cv_key_points[i]);
     }
-
-    // copy to output matrix
-    bool copyData = true;
-    descriptors = 
-        cv::Mat(descriptor_data, copyData).reshape(1, key_points.size());
 }

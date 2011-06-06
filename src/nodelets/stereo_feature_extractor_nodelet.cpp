@@ -30,9 +30,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 {
   public:
     StereoFeatureExtractorNodelet() :
-        stereo_camera_model_(new StereoCameraModel()),
-        stereo_feature_extractor_(FeatureExtractorFactory::create("CvSURF"),
-                                  stereo_camera_model_)
+        stereo_camera_model_(new StereoCameraModel())
     { }
 
 
@@ -60,6 +58,22 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("max_y_diff", max_y_diff_, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
         private_nh.param("max_size_diff", max_size_diff_, 2);
+
+        std::string feature_extractor_name;
+        private_nh.param("feature_extractor", feature_extractor_name, 
+                std::string("CvSURF"));
+        FeatureExtractor::Ptr feature_extractor = 
+            FeatureExtractorFactory::create(feature_extractor_name);
+        if (feature_extractor.get() == NULL)
+        {
+            NODELET_FATAL("Cannot create feature extractor with name %s",
+                    feature_extractor_name.c_str());
+        }
+        else
+        {
+            stereo_feature_extractor_.setFeatureExtractor(feature_extractor);
+        }
+        stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
 
         std::cout << "Parameters: max_y_diff = " << max_y_diff_
                   << " max_angle_diff = " << max_angle_diff_
