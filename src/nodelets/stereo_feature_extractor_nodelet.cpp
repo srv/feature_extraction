@@ -146,7 +146,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         NODELET_INFO("%i stereo features", stereo_features.size());
         std::cout << stereo_features.size() << " stereo features" << std::endl;
 
-        /*
         // Fill in new PointCloud2 message (2D image-like layout)
         sensor_msgs::PointCloud2Ptr points_msg = 
             boost::make_shared<sensor_msgs::PointCloud2>();
@@ -178,7 +177,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         points_msg->is_dense = false; // there may be invalid points
 
         float bad_point = std::numeric_limits<float>::quiet_NaN ();
-        int offset = 0;
 
         for (size_t i = 0; i < stereo_features.size(); ++i)
         {
@@ -191,10 +189,23 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             memcpy (&points_msg->data[offset + 0], &x, sizeof (float));
             memcpy (&points_msg->data[offset + 4], &y, sizeof (float));
             memcpy (&points_msg->data[offset + 8], &z, sizeof (float));
-            if (i == 0) 
-                std::cout << "first feature: " << stereo_features[i] << std::endl;
-        }
-    */
+            const std::string& encoding = l_image_msg->encoding;
+            if (encoding == enc::BGR8)
+            {
+                const cv::Point2f& image_point = stereo_features[i].key_point.pt;
+                const cv::Vec3b& bgr = 
+                    cv_ptr_left->image.at<cv::Vec3b>(image_point.y, image_point.x);
+                int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
+                memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
+            }
+            else
+            {
+                memcpy (&points_msg->data[offset + 12], &bad_point, sizeof (float));
+                NODELET_WARN_THROTTLE(30, 
+                        "Could not fill color channel of the point cloud, "
+                        "unsupported encoding '%s'", encoding.c_str());
+            }
+         }
         /*
         for (int v = 0; v < mat.rows; ++v)
         {
@@ -296,7 +307,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
 
 */
-//        pub_points2_.publish(points_msg);
+        pub_points2_.publish(points_msg);
     }
 
     boost::shared_ptr<image_transport::ImageTransport> it_;
