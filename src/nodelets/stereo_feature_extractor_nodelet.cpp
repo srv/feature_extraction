@@ -16,12 +16,14 @@
 #include <sensor_msgs/image_encodings.h>
 
 #include <cv_bridge/cv_bridge.h>
+#include <opencv2/highgui/highgui.hpp>
 
 #include "stereo_camera_model.h"
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
 
 
+static const char* WINDOW_NAME = "Stereo Features";
 
 namespace stereo_feature_extraction
 {
@@ -58,10 +60,11 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("max_y_diff", max_y_diff_, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
         private_nh.param("max_size_diff", max_size_diff_, 2);
+        private_nh.param("visualize", visualize_, true);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
-                std::string("CvSURF"));
+                std::string("SURF"));
         FeatureExtractor::Ptr feature_extractor = 
             FeatureExtractorFactory::create(feature_extractor_name);
         if (feature_extractor.get() == NULL)
@@ -77,7 +80,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
         std::cout << "Parameters: max_y_diff = " << max_y_diff_
                   << " max_angle_diff = " << max_angle_diff_
-                  << " max_size_diff = " << max_size_diff_ << std::endl;
+                  << " max_size_diff = " << max_size_diff_
+                  << " feature_extractor = " << feature_extractor_name
+                  << " visualize = " << visualize_ << std::endl;
         if (approx)
         {
             approximate_sync_.reset(
@@ -98,8 +103,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                                 this, _1, _2, _3, _4));
         }
 
+        if (visualize_) cv::namedWindow(WINDOW_NAME, 0);
+
         NODELET_INFO("Waiting for client subscriptions.");
-        std::cout << "Waiting for client subscriptions." << std::endl;
     }
 
     // Handles (un)subscribing when clients (un)subscribe
@@ -108,7 +114,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         if (pub_points2_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
-            std::cout << "No more clients connected, unsubscribing from camera." << std::endl;
             sub_l_image_  .unsubscribe();
             sub_r_image_  .unsubscribe();
             sub_l_info_   .unsubscribe();
@@ -118,11 +123,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         else if (!subscribed_)
         {
             NODELET_INFO("Client connected, subscribing to camera.");
-            std::cout << "Client connected, subscribing to camera." << std::endl;
             ros::NodeHandle &nh = getNodeHandle();
             // Queue size 1 should be OK; the one that matters is the synchronizer queue size.
-            sub_l_image_  .subscribe(*it_, "left/image_rect_color", 1);
-            sub_r_image_  .subscribe(*it_, "right/image_rect_color", 1);
+            sub_l_image_  .subscribe(*it_, "left/image_rect", 1);
+            sub_r_image_  .subscribe(*it_, "right/image_rect", 1);
             sub_l_info_   .subscribe(nh,   "left/camera_info", 1);
             sub_r_info_   .subscribe(nh,   "right/camera_info", 1);
             subscribed_ = true;
@@ -149,13 +153,18 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             return;
         }
 
-        // Calculate stereo features
         // Update the camera model
         stereo_camera_model_->fromCameraInfo(*l_info_msg, *r_info_msg);
         cv::Mat mask;
+        // Calculate stereo features
         std::vector<StereoFeature> stereo_features = stereo_feature_extractor_.extract(
             cv_ptr_left->image, cv_ptr_right->image, mask, mask, 
             max_y_diff_, max_angle_diff_, max_size_diff_);
+
+        if (visualize_)
+        {
+            paintStereoFeatures(cv_ptr_left->image, stereo_features);
+        }
 
         NODELET_INFO("%i stereo features", stereo_features.size());
         std::cout << stereo_features.size() << " stereo features" << std::endl;
@@ -204,21 +213,27 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             memcpy (&points_msg->data[offset + 4], &y, sizeof (float));
             memcpy (&points_msg->data[offset + 8], &z, sizeof (float));
             const std::string& encoding = l_image_msg->encoding;
+            const cv::Point2f& image_point = stereo_features[i].key_point.pt;
+            cv::Vec3b bgr;
             if (encoding == enc::BGR8)
             {
-                const cv::Point2f& image_point = stereo_features[i].key_point.pt;
-                const cv::Vec3b& bgr = 
-                    cv_ptr_left->image.at<cv::Vec3b>(image_point.y, image_point.x);
-                int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-                memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
+                bgr = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, image_point.x);
+            }
+            else if (encoding == enc::MONO8)
+            {
+                unsigned char value = 
+                    cv_ptr_left->image.at<unsigned char>(image_point.y, image_point.x);
+                bgr[0] = value; bgr[1] = value; bgr[2] = value;
             }
             else
             {
-                memcpy (&points_msg->data[offset + 12], &bad_point, sizeof (float));
+                bgr[0] = 0; bgr[1] = 0; bgr[2] = 0;
                 NODELET_WARN_THROTTLE(30, 
                         "Could not fill color channel of the point cloud, "
                         "unsupported encoding '%s'", encoding.c_str());
             }
+            int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
+            memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
          }
         /*
         for (int v = 0; v < mat.rows; ++v)
@@ -324,6 +339,22 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         pub_points2_.publish(points_msg);
     }
 
+    void paintStereoFeatures(const cv::Mat& image, 
+            const std::vector<StereoFeature>& stereo_features)
+    {
+        cv::Mat canvas = image.clone();
+        for (size_t i = 0; i < stereo_features.size(); ++i)
+        {
+            cv::Point center(cvRound(stereo_features[i].key_point.pt.x),
+                             cvRound(stereo_features[i].key_point.pt.y));
+            int radius = cvRound(stereo_features[i].key_point.size / 2);
+            cv::circle(canvas, center, radius, cv::Scalar(0, 255, 0), 2);
+        }
+        cv::imshow(WINDOW_NAME, canvas);
+        cv::waitKey(10);
+    }
+
+            
     boost::shared_ptr<image_transport::ImageTransport> it_;
     image_transport::SubscriberFilter sub_l_image_;
     image_transport::SubscriberFilter sub_r_image_;
@@ -358,6 +389,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     double max_y_diff_;
     double max_angle_diff_;
     int max_size_diff_;
+
+    // visualization
+    bool visualize_;
  
 };
 
