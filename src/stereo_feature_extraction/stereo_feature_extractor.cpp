@@ -6,6 +6,10 @@
 
 using namespace stereo_feature_extraction;
 
+StereoFeatureExtractor::StereoFeatureExtractor()
+{
+}
+
 StereoFeatureExtractor::StereoFeatureExtractor(
         const FeatureExtractor::Ptr& feature_extractor,
         const StereoCameraModel::Ptr& camera_model) :
@@ -14,12 +18,27 @@ StereoFeatureExtractor::StereoFeatureExtractor(
 {
 }
 
+void StereoFeatureExtractor::setFeatureExtractor(
+        const FeatureExtractor::Ptr& feature_extractor)
+{
+    feature_extractor_ = feature_extractor;
+}
+
+void StereoFeatureExtractor::setCameraModel(
+        const StereoCameraModel::Ptr& model)
+{
+    stereo_camera_model_ = model;
+}
+
 std::vector<StereoFeature> StereoFeatureExtractor::extract(
         const cv::Mat& image_left, const cv::Mat& image_right, 
         const cv::Mat& mask_left, const cv::Mat& mask_right,
         double max_y_diff, double max_angle_diff, 
         int max_size_diff) const
 {
+    assert(feature_extractor_.get() != NULL);
+    assert(stereo_camera_model_.get() != NULL);
+
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
     feature_extractor_->extract(image_left, mask_left, key_points_left, 

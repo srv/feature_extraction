@@ -21,14 +21,30 @@ class StereoFeatureExtractor
   public:
 
     /**
+    * Constructs an empty stereo feature extractor. Make sure to call
+    * setFeatureExtractor and setCameraModel before usage.
+    */
+    StereoFeatureExtractor();
+
+    /**
     * Constructs a stereo feature extractor with given parameters:
     * \param feature_extractor the extractor to use to extract features from
     *        each stereo image
-    * \param camera model the camera model that is used to compute the 3d
+    * \param model the camera model that is used to compute the 3d
     *        position of features
     */
     StereoFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor,
-            const StereoCameraModel::Ptr& camera_model);
+            const StereoCameraModel::Ptr& model);
+
+    /**
+    * \param feature_extractor new feature extractor to use
+    */
+    void setFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor);
+
+    /**
+    * \param model new camera model
+    */
+    void setCameraModel(const StereoCameraModel::Ptr& model);
 
     /**
     * Extracts stereo keypoints from given rectified stereo image pair.

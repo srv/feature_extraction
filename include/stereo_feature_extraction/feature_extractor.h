@@ -33,7 +33,7 @@ class FeatureExtractor
     virtual void extract(const cv::Mat& image, 
             const cv::Mat& mask,
             std::vector<KeyPoint>& key_points,
-            cv::Mat& descriptors) const = 0;
+            cv::Mat& descriptors) = 0;
 
     /// Ptr type
     typedef boost::shared_ptr<FeatureExtractor> Ptr;
