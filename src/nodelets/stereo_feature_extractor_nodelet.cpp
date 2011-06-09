@@ -190,13 +190,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         points_msg->fields[3].offset = 12;
         points_msg->fields[3].count = 1;
         points_msg->fields[3].datatype = sensor_msgs::PointField::FLOAT32;
-        static const int STEP = 16;
-        points_msg->point_step = STEP;
+        points_msg->point_step = 16;
         points_msg->row_step = points_msg->point_step * points_msg->width;
         points_msg->data.resize (points_msg->row_step * points_msg->height);
         points_msg->is_dense = false; // there may be invalid points
-
-        float bad_point = std::numeric_limits<float>::quiet_NaN ();
 
         for (size_t i = 0; i < stereo_features.size(); ++i)
         {
@@ -209,34 +206,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             memcpy (&points_msg->data[offset + 0], &x, sizeof (float));
             memcpy (&points_msg->data[offset + 4], &y, sizeof (float));
             memcpy (&points_msg->data[offset + 8], &z, sizeof (float));
-            const std::string& encoding = l_image_msg->encoding;
-            const cv::Point2f& image_point = stereo_features[i].key_point.pt;
-            cv::Vec3b bgr;
-            if (encoding == enc::BGR8)
-            {
-                bgr = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, 
-                        image_point.x);
-            }
-            else if (encoding == enc::RGB8)
-            {
-                cv::Vec3b rgb = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, 
-                        image_point.x);
-                bgr[0] = rgb[2]; bgr[1] = rgb[1]; bgr[2] = rgb[0];
-            }
-            else if (encoding == enc::MONO8)
-            {
-                unsigned char value = 
-                    cv_ptr_left->image.at<unsigned char>(image_point.y, 
-                            image_point.x);
-                bgr[0] = value; bgr[1] = value; bgr[2] = value;
-            }
-            else
-            {
-                bgr[0] = 0; bgr[1] = 0; bgr[2] = 0;
-                NODELET_WARN_THROTTLE(30, 
-                        "Could not fill color channel of the point cloud, "
-                        "unsupported encoding '%s'", encoding.c_str());
-            }
+            cv::Vec3b bgr = stereo_features[i].color;
             int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
             memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
         }
