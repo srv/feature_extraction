@@ -165,6 +165,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             max_y_diff_, max_angle_diff_, max_size_diff_);
 
         NODELET_INFO("%i stereo features", stereo_features.size());
+        if (stereo_features.size() == 0)
+        {
+            return;
+        }
 
         // Fill in new PointCloud2 message (2D image-like layout)
         sensor_msgs::PointCloud2Ptr points_msg = 
@@ -173,7 +177,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
         points_msg->height = stereo_features.size();
         points_msg->width  = 1;
-        points_msg->fields.resize(4);
+        points_msg->fields.resize(5);
         points_msg->fields[0].name = "x";
         points_msg->fields[0].offset = 0;
         points_msg->fields[0].count = 1;
@@ -190,9 +194,14 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         points_msg->fields[3].offset = 12;
         points_msg->fields[3].count = 1;
         points_msg->fields[3].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->point_step = 16;
+        points_msg->fields[4].name = "descriptor";
+        points_msg->fields[4].offset = 16;
+        const int DESCRIPTOR_SIZE = stereo_features[0].descriptor.cols;
+        points_msg->fields[4].count = DESCRIPTOR_SIZE;
+        points_msg->fields[4].datatype = sensor_msgs::PointField::FLOAT32;
+        points_msg->point_step = 16 + sizeof(float) * DESCRIPTOR_SIZE;
         points_msg->row_step = points_msg->point_step * points_msg->width;
-        points_msg->data.resize (points_msg->row_step * points_msg->height);
+        points_msg->data.resize(points_msg->row_step * points_msg->height);
         points_msg->is_dense = false; // there may be invalid points
 
         for (size_t i = 0; i < stereo_features.size(); ++i)
@@ -203,12 +212,15 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             float y = point.y;
             float z = point.z;
             // pack data into point message data
-            memcpy (&points_msg->data[offset + 0], &x, sizeof (float));
-            memcpy (&points_msg->data[offset + 4], &y, sizeof (float));
-            memcpy (&points_msg->data[offset + 8], &z, sizeof (float));
+            memcpy(&points_msg->data[offset + 0], &x, sizeof(float));
+            memcpy(&points_msg->data[offset + 4], &y, sizeof(float));
+            memcpy(&points_msg->data[offset + 8], &z, sizeof(float));
             cv::Vec3b bgr = stereo_features[i].color;
             int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-            memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
+            memcpy(&points_msg->data[offset + 12], &rgb_packed, sizeof(int32_t));
+            const unsigned char* descriptor_data = stereo_features[i].descriptor.data;
+            memcpy(&points_msg->data[offset + 16], descriptor_data, 
+                   sizeof(float) * DESCRIPTOR_SIZE);
         }
         
         pub_points2_.publish(points_msg);
