@@ -23,8 +23,6 @@
 #include "feature_extractor_factory.h"
 
 
-static const char* WINDOW_NAME = "Stereo Features";
-
 namespace stereo_feature_extraction
 {
 
@@ -50,6 +48,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         pub_points2_  = nh.advertise<sensor_msgs::PointCloud2>("stereo_features",  1, 
                 connect_cb, connect_cb);
 
+        pub_debug_image_ = nh.advertise<sensor_msgs::Image>("debug_image", 1,
+                connect_cb, connect_cb);
+
         // Synchronize inputs. Topic subscriptions happen on demand in the 
         // connection callback. Optionally do approximate synchronization.
         int queue_size;
@@ -60,7 +61,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("max_y_diff", max_y_diff_, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
         private_nh.param("max_size_diff", max_size_diff_, 2);
-        private_nh.param("visualize", visualize_, true);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -78,11 +78,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
         stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
 
-        std::cout << "Parameters: max_y_diff = " << max_y_diff_
+        NODELET_INFO_STREAM("Parameters: max_y_diff = " << max_y_diff_
                   << " max_angle_diff = " << max_angle_diff_
                   << " max_size_diff = " << max_size_diff_
-                  << " feature_extractor = " << feature_extractor_name
-                  << " visualize = " << visualize_ << std::endl;
+                  << " feature_extractor = " << feature_extractor_name);
         if (approx)
         {
             approximate_sync_.reset(
@@ -103,7 +102,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                                 this, _1, _2, _3, _4));
         }
 
-        if (visualize_) cv::namedWindow(WINDOW_NAME, 0);
 
         NODELET_INFO("Waiting for client subscriptions.");
     }
@@ -111,7 +109,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // Handles (un)subscribing when clients (un)subscribe
     void connectCb()
     {
-        if (pub_points2_.getNumSubscribers() == 0)
+        if (pub_points2_.getNumSubscribers() == 0 && 
+            pub_debug_image_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
             sub_l_image_  .unsubscribe();
@@ -155,19 +154,17 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
         // Update the camera model
         stereo_camera_model_->fromCameraInfo(*l_info_msg, *r_info_msg);
+
         cv::Mat mask;
+        const cv::Mat& left_image = cv_ptr_left->image;
+        const cv::Mat& right_image = cv_ptr_right->image;
+
         // Calculate stereo features
         std::vector<StereoFeature> stereo_features = stereo_feature_extractor_.extract(
-            cv_ptr_left->image, cv_ptr_right->image, mask, mask, 
+            left_image, right_image, mask, mask, 
             max_y_diff_, max_angle_diff_, max_size_diff_);
 
-        if (visualize_)
-        {
-            paintStereoFeatures(cv_ptr_left->image, stereo_features);
-        }
-
         NODELET_INFO("%i stereo features", stereo_features.size());
-        std::cout << stereo_features.size() << " stereo features" << std::endl;
 
         // Fill in new PointCloud2 message (2D image-like layout)
         sensor_msgs::PointCloud2Ptr points_msg = 
@@ -217,12 +214,20 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv::Vec3b bgr;
             if (encoding == enc::BGR8)
             {
-                bgr = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, image_point.x);
+                bgr = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, 
+                        image_point.x);
+            }
+            else if (encoding == enc::RGB8)
+            {
+                cv::Vec3b rgb = cv_ptr_left->image.at<cv::Vec3b>(image_point.y, 
+                        image_point.x);
+                bgr[0] = rgb[2]; bgr[1] = rgb[1]; bgr[2] = rgb[0];
             }
             else if (encoding == enc::MONO8)
             {
                 unsigned char value = 
-                    cv_ptr_left->image.at<unsigned char>(image_point.y, image_point.x);
+                    cv_ptr_left->image.at<unsigned char>(image_point.y, 
+                            image_point.x);
                 bgr[0] = value; bgr[1] = value; bgr[2] = value;
             }
             else
@@ -234,124 +239,32 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             }
             int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
             memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
-         }
-        /*
-        for (int v = 0; v < mat.rows; ++v)
-        {
-        for (int u = 0; u < mat.cols; ++u, offset += STEP)
-        {
-            if (isValidPoint(mat(v,u)))
-            {
-            // x,y,z,rgba
-            memcpy (&points_msg->data[offset + 0], &mat(v,u)[0], sizeof (float));
-            memcpy (&points_msg->data[offset + 4], &mat(v,u)[1], sizeof (float));
-            memcpy (&points_msg->data[offset + 8], &mat(v,u)[2], sizeof (float));
-            }
-            else
-            {
-            memcpy (&points_msg->data[offset + 0], &bad_point, sizeof (float));
-            memcpy (&points_msg->data[offset + 4], &bad_point, sizeof (float));
-            memcpy (&points_msg->data[offset + 8], &bad_point, sizeof (float));
-            }
         }
-        }
-
-        // Fill in color
-        namespace enc = sensor_msgs::image_encodings;
-        const std::string& encoding = l_image_msg->encoding;
-        offset = 0;
-        if (encoding == enc::MONO8)
-        {
-        const cv::Mat_<uint8_t> color(l_image_msg->height, l_image_msg->width,
-                                        (uint8_t*)&l_image_msg->data[0],
-                                        l_image_msg->step);
-        for (int v = 0; v < mat.rows; ++v)
-        {
-            for (int u = 0; u < mat.cols; ++u, offset += STEP)
-            {
-            if (isValidPoint(mat(v,u)))
-            {
-                uint8_t g = color(v,u);
-                int32_t rgb = (g << 16) | (g << 8) | g;
-                memcpy (&points_msg->data[offset + 12], &rgb, sizeof (int32_t));
-            }
-            else
-            {
-                memcpy (&points_msg->data[offset + 12], &bad_point, sizeof (float));
-            }
-            }
-        }
-        }
-        else if (encoding == enc::RGB8)
-        {
-        const cv::Mat_<cv::Vec3b> color(l_image_msg->height, l_image_msg->width,
-                                        (cv::Vec3b*)&l_image_msg->data[0],
-                                        l_image_msg->step);
-        for (int v = 0; v < mat.rows; ++v)
-        {
-            for (int u = 0; u < mat.cols; ++u, offset += STEP)
-            {
-            if (isValidPoint(mat(v,u)))
-            {
-                const cv::Vec3b& rgb = color(v,u);
-                int32_t rgb_packed = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
-                memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
-            }
-            else
-            {
-                memcpy (&points_msg->data[offset + 12], &bad_point, sizeof (float));
-            }
-            }
-        }
-        }
-        else if (encoding == enc::BGR8)
-        {
-        const cv::Mat_<cv::Vec3b> color(l_image_msg->height, l_image_msg->width,
-                                        (cv::Vec3b*)&l_image_msg->data[0],
-                                        l_image_msg->step);
-        for (int v = 0; v < mat.rows; ++v)
-        {
-            for (int u = 0; u < mat.cols; ++u, offset += STEP)
-            {
-            if (isValidPoint(mat(v,u)))
-            {
-                const cv::Vec3b& bgr = color(v,u);
-                int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-                memcpy (&points_msg->data[offset + 12], &rgb_packed, sizeof (int32_t));
-            }
-            else
-            {
-                memcpy (&points_msg->data[offset + 12], &bad_point, sizeof (float));
-            }
-            }
-        }
-        }
-        else
-        {
-        NODELET_WARN_THROTTLE(30, "Could not fill color channel of the point cloud, "
-                                "unsupported encoding '%s'", encoding.c_str());
-        }
-
+        
         pub_points2_.publish(points_msg);
-        }
 
-*/
-        pub_points2_.publish(points_msg);
+        if (pub_debug_image_.getNumSubscribers() > 0)
+        {
+            cv::Mat canvas = cv_ptr_left->image.clone();
+            paintStereoFeatures(canvas, stereo_features);
+            cv_bridge::CvImage cv_image;
+            cv_image.header = cv_ptr_left->header;
+            cv_image.encoding = cv_ptr_left->encoding;
+            cv_image.image = canvas;
+            pub_debug_image_.publish(cv_image.toImageMsg());
+        }
     }
 
-    void paintStereoFeatures(const cv::Mat& image, 
+    void paintStereoFeatures(cv::Mat& image, 
             const std::vector<StereoFeature>& stereo_features)
     {
-        cv::Mat canvas = image.clone();
         for (size_t i = 0; i < stereo_features.size(); ++i)
         {
             cv::Point center(cvRound(stereo_features[i].key_point.pt.x),
                              cvRound(stereo_features[i].key_point.pt.y));
             int radius = cvRound(stereo_features[i].key_point.size / 2);
-            cv::circle(canvas, center, radius, cv::Scalar(0, 255, 0), 2);
+            cv::circle(image, center, radius, cv::Scalar(0, 255, 0), 2);
         }
-        cv::imshow(WINDOW_NAME, canvas);
-        cv::waitKey(10);
     }
 
             
@@ -371,6 +284,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
     // Publications
     ros::Publisher pub_points2_;
+    ros::Publisher pub_debug_image_;
 
     // Processing state (note: only safe because we're single-threaded!)
     image_geometry::StereoCameraModel model_;
@@ -389,9 +303,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     double max_y_diff_;
     double max_angle_diff_;
     int max_size_diff_;
-
-    // visualization
-    bool visualize_;
  
 };
 

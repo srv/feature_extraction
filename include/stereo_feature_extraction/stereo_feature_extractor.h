@@ -108,6 +108,24 @@ class StereoFeatureExtractor
             std::vector<cv::DMatch>& matches, 
             const cv::Mat& match_mask = cv::Mat());
 
+    /**
+    * Matches two sets of descriptors, searching for the 2 nearest neighbors
+    * in features_right for each element in features_left. Matches are accepted
+    * if the ratio of the distance from the first match and the distance from
+    * the second match are below a threshold.
+    * \param features_left descriptors for left image
+    * \param features_right descriptors for right image
+    * \param matches vector to store matches
+    * \param match_mask the mask to use to allow matches, if empty, all
+    *        descriptors are matched to each other
+    */
+    static void thresholdMatching(
+            const cv::Mat& descriptors_left, 
+            const cv::Mat& descriptors_right,
+            std::vector<cv::DMatch>& matches, 
+            const cv::Mat& match_mask = cv::Mat());
+
+
 
   protected:
 

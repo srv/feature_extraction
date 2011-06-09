@@ -54,7 +54,8 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
             max_angle_diff, max_size_diff);
 
     std::vector<cv::DMatch> matches;
-    crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);
+    //crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);
+    thresholdMatching(descriptors_left, descriptors_right, matches, match_mask);
 
     std::vector<StereoFeature> stereo_features(matches.size());
     for (size_t i = 0; i < matches.size(); ++i)
@@ -113,7 +114,6 @@ void StereoFeatureExtractor::computeMatchMask(
     }
 }
 
-// TODO remove distance threshold hack!!
 void StereoFeatureExtractor::crossCheckMatching(
                             const cv::Mat& descriptors_left, 
                             const cv::Mat& descriptors_right,
@@ -121,15 +121,25 @@ void StereoFeatureExtractor::crossCheckMatching(
                             const cv::Mat& match_mask)
 {
     matches.clear();
-    int knn = 1;
+    int knn = 2;
     cv::Ptr<cv::DescriptorMatcher> descriptor_matcher = 
         cv::DescriptorMatcher::create("BruteForce");
     std::vector<std::vector<cv::DMatch> > matches_left2right, matches_right2left;
-    descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
-            matches_left2right, knn, match_mask.t());
-    descriptor_matcher->knnMatch(descriptors_right, descriptors_left,
-            matches_right2left, knn, match_mask);
-    static double DISTANCE_THRESHOLD = 0.5;
+    if (match_mask.empty())
+    {
+        descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
+            matches_left2right, knn);
+        descriptor_matcher->knnMatch(descriptors_right, descriptors_left,
+            matches_right2left, knn);
+    }
+    else
+    {
+        descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
+                matches_left2right, knn, match_mask.t());
+        descriptor_matcher->knnMatch(descriptors_right, descriptors_left,
+                matches_right2left, knn, match_mask);
+    }
+
     for (size_t m = 0; m < matches_left2right.size(); m++ )
     {
         bool cross_check_found = false;
@@ -142,15 +152,95 @@ void StereoFeatureExtractor::crossCheckMatching(
                 const cv::DMatch& backward = matches_right2left[forward.trainIdx][bk];
                 if( backward.trainIdx == forward.queryIdx )
                 {
-                    if (forward.distance < DISTANCE_THRESHOLD)
-                    {
-                        matches.push_back(forward);
-                        cross_check_found = true;
-                    }
+                    matches.push_back(forward);
+                    cross_check_found = true;
                     break;
                 }
             }
             if (cross_check_found) break;
+        }
+    }
+}
+
+/*
+void StereoFeatureExtractor::thresholdMatching(
+                            const cv::Mat& descriptors_left, 
+                            const cv::Mat& descriptors_right,
+                            std::vector<cv::DMatch>& matches, 
+                            const cv::Mat& match_mask)
+{
+    matches.clear();
+    int knn = 2;
+    cv::Ptr<cv::DescriptorMatcher> descriptor_matcher = 
+        cv::DescriptorMatcher::create("BruteForce");
+    std::vector<std::vector<cv::DMatch> > matches_left2right;
+    if (match_mask.empty())
+    {
+        descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
+                matches_left2right, knn);
+    }
+    else
+    {
+        descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
+                matches_left2right, knn, match_mask.t());
+    }
+
+    for (size_t m = 0; m < matches_left2right.size(); m++ )
+    {
+        if (matches_left2right[m].size() == 1)
+        {
+            matches.push_back(matches_left2right[m][0]);
+        } 
+        else if (matches_left2right[m].size() == 2)
+        {
+            float dist1 = matches_left2right[m][0].distance;
+            float dist2 = matches_left2right[m][1].distance;
+            static const float DISTANCE_RATIO_THRESHOLD = 0.8;
+            if (dist1 / dist2 < DISTANCE_RATIO_THRESHOLD)
+            {
+                matches.push_back(matches_left2right[m][0]);
+                float new_threshold = (dist2 + dist1) / 2;
+                if (dynamic_threshold < 0)
+                {
+                    dynamic_threshold = new_threshold;
+                }
+                else
+                {
+                    dynamic_threshold = 0.99 * dynamic_threshold + 0.01 * new_threshold;
+                }
+            }
+         }
+    }
+}
+*/
+void StereoFeatureExtractor::thresholdMatching(
+                            const cv::Mat& descriptors_left, 
+                            const cv::Mat& descriptors_right,
+                            std::vector<cv::DMatch>& matches, 
+                            const cv::Mat& match_mask)
+{
+    matches.clear();
+    int knn = 2;
+    cv::Ptr<cv::DescriptorMatcher> descriptor_matcher = 
+        cv::DescriptorMatcher::create("BruteForce");
+    std::vector<std::vector<cv::DMatch> > matches_left2right;
+    descriptor_matcher->knnMatch(descriptors_left, descriptors_right,
+            matches_left2right, knn);
+
+    for (size_t m = 0; m < matches_left2right.size(); m++ )
+    {
+        if (matches_left2right[m].size() == 2)
+        {
+            float dist1 = matches_left2right[m][0].distance;
+            float dist2 = matches_left2right[m][1].distance;
+            int queryIndex = matches_left2right[m][0].queryIdx;
+            int trainIndex = matches_left2right[m][0].trainIdx;
+            static const float DISTANCE_RATIO_THRESHOLD = 0.8;
+            if (dist1 / dist2 < DISTANCE_RATIO_THRESHOLD &&
+                    match_mask.at<unsigned char>(trainIndex, queryIndex) > 0)
+            {
+                matches.push_back(matches_left2right[m][0]);
+            }
         }
     }
 }

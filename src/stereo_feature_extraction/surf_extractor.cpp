@@ -4,7 +4,13 @@
 
 using namespace stereo_feature_extraction;
 
-SurfExtractor::SurfExtractor()
+static const int OCTAVES = 4;
+static const int INIT_STEP = 2;
+static const int THRESHOLD_RESPONSE = 26;
+static const int MAX_POINTS = 200;
+
+SurfExtractor::SurfExtractor() :
+    surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE, MAX_POINTS)
 {
 }
 
@@ -25,8 +31,6 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     }
 
     std::vector<cv::KeyPoint> cv_key_points;
-    //odometry::Surf surf;
-    //surf(gray_image, mask, cv_key_points, descriptors);
     surf_(gray_image, mask, cv_key_points, descriptors);
 
     key_points.resize(cv_key_points.size());
