@@ -199,7 +199,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
         points_msg->height = stereo_features.size();
         points_msg->width  = 1;
-        points_msg->fields.resize(5);
+        points_msg->fields.resize(7);
         points_msg->fields[0].name = "x";
         points_msg->fields[0].offset = 0;
         points_msg->fields[0].count = 1;
@@ -216,12 +216,20 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         points_msg->fields[3].offset = 12;
         points_msg->fields[3].count = 1;
         points_msg->fields[3].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[4].name = "descriptor";
+        points_msg->fields[4].name = "key_point_x";
         points_msg->fields[4].offset = 16;
-        const int DESCRIPTOR_SIZE = stereo_features[0].descriptor.cols;
-        points_msg->fields[4].count = DESCRIPTOR_SIZE;
+        points_msg->fields[4].count = 1;
         points_msg->fields[4].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->point_step = 16 + sizeof(float) * DESCRIPTOR_SIZE;
+        points_msg->fields[5].name = "key_point_y";
+        points_msg->fields[5].offset = 20;
+        points_msg->fields[5].count = 1;
+        points_msg->fields[5].datatype = sensor_msgs::PointField::FLOAT32;
+        points_msg->fields[6].name = "descriptor";
+        points_msg->fields[6].offset = 24;
+        const int DESCRIPTOR_SIZE = stereo_features[0].descriptor.cols;
+        points_msg->fields[6].count = DESCRIPTOR_SIZE;
+        points_msg->fields[6].datatype = sensor_msgs::PointField::FLOAT32;
+        points_msg->point_step = 24 + sizeof(float) * DESCRIPTOR_SIZE;
         points_msg->row_step = points_msg->point_step * points_msg->width;
         points_msg->data.resize(points_msg->row_step * points_msg->height);
         points_msg->is_dense = false; // there may be invalid points
@@ -240,8 +248,11 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv::Vec3b bgr = stereo_features[i].color;
             int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
             memcpy(&points_msg->data[offset + 12], &rgb_packed, sizeof(int32_t));
+            const cv::Point2f key_point_pt = stereo_features[i].key_point.pt;
+            memcpy(&points_msg->data[offset + 16], &key_point_pt.x, sizeof(float));
+            memcpy(&points_msg->data[offset + 20], &key_point_pt.y, sizeof(float));
             const unsigned char* descriptor_data = stereo_features[i].descriptor.data;
-            memcpy(&points_msg->data[offset + 16], descriptor_data, 
+            memcpy(&points_msg->data[offset + 24], descriptor_data, 
                    sizeof(float) * DESCRIPTOR_SIZE);
         }
 
