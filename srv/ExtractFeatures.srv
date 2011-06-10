@@ -1,0 +1,7 @@
+# request, images must be rectified
+sensor_msgs/Image left_image
+sensor_msgs/Image right_image
+sensor_msgs/CameraInfo left_camera_info
+sensor_msgs/CameraInfo right_camera_info
+---
+sensor_msgs/PointCloud2 features

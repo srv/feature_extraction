@@ -22,6 +22,7 @@
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
 
+#include "stereo_feature_extraction/ExtractFeatures.h" // generated srv header
 
 namespace stereo_feature_extraction
 {
@@ -102,6 +103,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                                 this, _1, _2, _3, _4));
         }
 
+        // advertise the service
+        service_server_ = nh.advertiseService("extract_features", 
+                &StereoFeatureExtractorNodelet::extractFeaturesSrvCb, this);
+
 
         NODELET_INFO("Waiting for client subscriptions.");
     }
@@ -137,43 +142,60 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                  const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                  const sensor_msgs::CameraInfoConstPtr& r_info_msg)
     {
+        sensor_msgs::PointCloud2Ptr points_msg =
+            extractFeatures(*l_image_msg, *r_image_msg,
+                            *l_info_msg, *r_info_msg);
+
+        if (points_msg.get() != NULL)
+        {
+            pub_points2_.publish(points_msg);
+
+         }
+    }
+
+    sensor_msgs::PointCloud2Ptr extractFeatures(
+            const sensor_msgs::Image& l_image_msg,
+            const sensor_msgs::Image& r_image_msg,
+            const sensor_msgs::CameraInfo& l_info_msg,
+            const sensor_msgs::CameraInfo& r_info_msg)
+    {
         // bridge to opencv
         namespace enc = sensor_msgs::image_encodings;
         cv_bridge::CvImageConstPtr cv_ptr_left;
         cv_bridge::CvImageConstPtr cv_ptr_right;
         try
         {
-            cv_ptr_left = cv_bridge::toCvShare(l_image_msg, enc::BGR8);
-            cv_ptr_right = cv_bridge::toCvShare(r_image_msg, enc::BGR8);
+            cv_ptr_left = cv_bridge::toCvCopy(l_image_msg, enc::BGR8);
+            cv_ptr_right = cv_bridge::toCvCopy(r_image_msg, enc::BGR8);
         }
         catch (cv_bridge::Exception& e)
         {
             NODELET_ERROR("cv_bridge exception: %s", e.what());
-            return;
+            return sensor_msgs::PointCloud2Ptr();
         }
 
         // Update the camera model
-        stereo_camera_model_->fromCameraInfo(*l_info_msg, *r_info_msg);
+        stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
 
         cv::Mat mask;
         const cv::Mat& left_image = cv_ptr_left->image;
         const cv::Mat& right_image = cv_ptr_right->image;
 
         // Calculate stereo features
-        std::vector<StereoFeature> stereo_features = stereo_feature_extractor_.extract(
-            left_image, right_image, mask, mask, 
-            max_y_diff_, max_angle_diff_, max_size_diff_);
+        std::vector<StereoFeature> stereo_features = 
+            stereo_feature_extractor_.extract(left_image, right_image, 
+                    mask, mask, max_y_diff_, max_angle_diff_, max_size_diff_);
 
         NODELET_INFO("%i stereo features", stereo_features.size());
         if (stereo_features.size() == 0)
         {
-            return;
+            return sensor_msgs::PointCloud2Ptr();
         }
 
         // Fill in new PointCloud2 message (2D image-like layout)
         sensor_msgs::PointCloud2Ptr points_msg = 
             boost::make_shared<sensor_msgs::PointCloud2>();
-        points_msg->header = l_image_msg->header;
+        points_msg->header = l_image_msg.header;
 
         points_msg->height = stereo_features.size();
         points_msg->width  = 1;
@@ -222,8 +244,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             memcpy(&points_msg->data[offset + 16], descriptor_data, 
                    sizeof(float) * DESCRIPTOR_SIZE);
         }
-        
-        pub_points2_.publish(points_msg);
 
         if (pub_debug_image_.getNumSubscribers() > 0)
         {
@@ -235,6 +255,27 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv_image.image = canvas;
             pub_debug_image_.publish(cv_image.toImageMsg());
         }
+        return points_msg;
+    }
+
+    /**
+    * implementation of the service
+    */
+    bool extractFeaturesSrvCb(ExtractFeatures::Request& request,
+                         ExtractFeatures::Response& response)
+    {
+         sensor_msgs::PointCloud2Ptr features = extractFeatures(
+            request.left_image, request.right_image,
+            request.left_camera_info, request.right_camera_info);
+         if (features.get() == NULL)
+         {
+             return false;
+         }
+         else
+         {
+            response.features = *features;
+            return true;
+         }
     }
 
     void paintStereoFeatures(cv::Mat& image, 
@@ -280,6 +321,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
     // the extractor
     StereoFeatureExtractor stereo_feature_extractor_;
+
+    // the srv
+    ros::ServiceServer service_server_;
 
     // matching parameters
     double max_y_diff_;
