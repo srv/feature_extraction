@@ -224,6 +224,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             points_msg.fields[3].name = "rgb";
             points_msg.fields[3].offset = 12;
             points_msg.fields[3].count = 1;
+            points_msg.fields[3].datatype = sensor_msgs::PointField::FLOAT32;
             points_msg.point_step = 16;
             points_msg.row_step = points_msg.point_step * points_msg.width;
             points_msg.data.resize(points_msg.row_step * points_msg.height);
