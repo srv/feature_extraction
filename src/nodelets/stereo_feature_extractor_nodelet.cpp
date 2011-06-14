@@ -12,7 +12,7 @@
 
 #include <image_geometry/stereo_camera_model.h>
 
-#include <sensor_msgs/PointCloud2.h>
+#include <vision_msgs/StereoFeatures.h>
 #include <sensor_msgs/image_encodings.h>
 
 #include <cv_bridge/cv_bridge.h>
@@ -46,7 +46,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         ros::SubscriberStatusCallback connect_cb = 
             boost::bind(&StereoFeatureExtractorNodelet::connectCb, this);
 
-        pub_points2_  = nh.advertise<sensor_msgs::PointCloud2>("stereo_features",  1, 
+        pub_features_  = nh.advertise<vision_msgs::StereoFeatures>("stereo_features",  1, 
+                connect_cb, connect_cb);
+
+        pub_points_ = nh.advertise<sensor_msgs::PointCloud2>("stereo_feature_points", 1,
                 connect_cb, connect_cb);
 
         pub_debug_image_ = nh.advertise<sensor_msgs::Image>("debug_image", 1,
@@ -114,8 +117,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // Handles (un)subscribing when clients (un)subscribe
     void connectCb()
     {
-        if (pub_points2_.getNumSubscribers() == 0 && 
-            pub_debug_image_.getNumSubscribers() == 0)
+        if (pub_features_.getNumSubscribers() == 0 && 
+            pub_debug_image_.getNumSubscribers() == 0 &&
+            pub_points_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
             sub_l_image_  .unsubscribe();
@@ -142,131 +146,137 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                  const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                  const sensor_msgs::CameraInfoConstPtr& r_info_msg)
     {
-        sensor_msgs::PointCloud2Ptr points_msg =
+        vision_msgs::StereoFeaturesPtr features_msg =
             extractFeatures(*l_image_msg, *r_image_msg,
                             *l_info_msg, *r_info_msg);
 
-        if (points_msg.get() != NULL)
+        if (features_msg.get() != NULL)
         {
-            pub_points2_.publish(points_msg);
+            pub_features_.publish(features_msg);
 
-         }
+            if (pub_points_.getNumSubscribers() > 0)
+            {
+                sensor_msgs::PointCloud2Ptr point_cloud =
+                    boost::make_shared<sensor_msgs::PointCloud2>();
+                *point_cloud = features_msg->world_points;
+                pub_points_.publish(point_cloud);
+            }
+        }
     }
 
-    sensor_msgs::PointCloud2Ptr extractFeatures(
+    vision_msgs::StereoFeaturesPtr extractFeatures(
             const sensor_msgs::Image& l_image_msg,
             const sensor_msgs::Image& r_image_msg,
             const sensor_msgs::CameraInfo& l_info_msg,
             const sensor_msgs::CameraInfo& r_info_msg)
     {
-        // bridge to opencv
-        namespace enc = sensor_msgs::image_encodings;
-        cv_bridge::CvImageConstPtr cv_ptr_left;
-        cv_bridge::CvImageConstPtr cv_ptr_right;
         try
         {
+            // bridge to opencv
+            namespace enc = sensor_msgs::image_encodings;
+            cv_bridge::CvImageConstPtr cv_ptr_left;
+            cv_bridge::CvImageConstPtr cv_ptr_right;
             cv_ptr_left = cv_bridge::toCvCopy(l_image_msg, enc::BGR8);
             cv_ptr_right = cv_bridge::toCvCopy(r_image_msg, enc::BGR8);
+            
+            // Update the camera model
+            stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
+
+            cv::Mat mask;
+            const cv::Mat& left_image = cv_ptr_left->image;
+            const cv::Mat& right_image = cv_ptr_right->image;
+
+            // Calculate stereo features
+            std::vector<StereoFeature> stereo_features = 
+                stereo_feature_extractor_.extract(left_image, right_image, 
+                        mask, mask, max_y_diff_, max_angle_diff_, max_size_diff_);
+
+            NODELET_INFO("%i stereo features", stereo_features.size());
+            if (stereo_features.size() == 0)
+            {
+                return vision_msgs::StereoFeaturesPtr();
+            }
+
+            // Fill in new features message
+            vision_msgs::StereoFeaturesPtr features_msg = 
+                boost::make_shared<vision_msgs::StereoFeatures>();
+            features_msg->header = l_image_msg.header;
+
+            // 3D points
+            sensor_msgs::PointCloud2& points_msg = features_msg->world_points;
+            points_msg.header = l_image_msg.header;
+
+            points_msg.height = stereo_features.size();
+            points_msg.width  = 1;
+            points_msg.fields.resize(4);
+            points_msg.fields[0].name = "x";
+            points_msg.fields[0].offset = 0;
+            points_msg.fields[0].count = 1;
+            points_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
+            points_msg.fields[1].name = "y";
+            points_msg.fields[1].offset = 4;
+            points_msg.fields[1].count = 1;
+            points_msg.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
+            points_msg.fields[2].name = "z";
+            points_msg.fields[2].offset = 8;
+            points_msg.fields[2].count = 1;
+            points_msg.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
+            points_msg.fields[3].name = "rgb";
+            points_msg.fields[3].offset = 12;
+            points_msg.fields[3].count = 1;
+            points_msg.point_step = 16;
+            points_msg.row_step = points_msg.point_step * points_msg.width;
+            points_msg.data.resize(points_msg.row_step * points_msg.height);
+            points_msg.is_dense = false; // there may be invalid points
+
+            features_msg->features.resize(stereo_features.size());
+            for (size_t i = 0; i < stereo_features.size(); ++i)
+            {
+                // fill data of
+                // point cloud message
+                int offset = i * points_msg.point_step;
+                const cv::Point3d& point = stereo_features[i].world_point;
+                float x = point.x;
+                float y = point.y;
+                float z = point.z;
+                // pack data into point message data
+                memcpy(&points_msg.data[offset + 0], &x, sizeof(float));
+                memcpy(&points_msg.data[offset + 4], &y, sizeof(float));
+                memcpy(&points_msg.data[offset + 8], &z, sizeof(float));
+                cv::Vec3b bgr = stereo_features[i].color;
+                int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
+                memcpy(&points_msg.data[offset + 12], &rgb_packed, sizeof(int32_t));
+
+                // feature array
+                vision_msgs::Feature feature;
+                feature.x = stereo_features[i].key_point.pt.x;
+                feature.y = stereo_features[i].key_point.pt.y;
+                feature.descriptor = stereo_features[i].descriptor;
+
+                features_msg->features[i].x = stereo_features[i].key_point.pt.x;
+                features_msg->features[i].y = stereo_features[i].key_point.pt.y;
+                features_msg->features[i].descriptor = stereo_features[i].descriptor;
+            }
+
+            if (pub_debug_image_.getNumSubscribers() > 0)
+            {
+                cv::Mat canvas = cv_ptr_left->image.clone();
+                paintStereoFeatures(canvas, stereo_features);
+                cv_bridge::CvImage cv_image;
+                cv_image.header = cv_ptr_left->header;
+                cv_image.encoding = cv_ptr_left->encoding;
+                cv_image.image = canvas;
+                pub_debug_image_.publish(cv_image.toImageMsg());
+            }
+
+            return features_msg;
         }
         catch (cv_bridge::Exception& e)
         {
             NODELET_ERROR("cv_bridge exception: %s", e.what());
-            return sensor_msgs::PointCloud2Ptr();
         }
-
-        // Update the camera model
-        stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
-
-        cv::Mat mask;
-        const cv::Mat& left_image = cv_ptr_left->image;
-        const cv::Mat& right_image = cv_ptr_right->image;
-
-        // Calculate stereo features
-        std::vector<StereoFeature> stereo_features = 
-            stereo_feature_extractor_.extract(left_image, right_image, 
-                    mask, mask, max_y_diff_, max_angle_diff_, max_size_diff_);
-
-        NODELET_INFO("%i stereo features", stereo_features.size());
-        if (stereo_features.size() == 0)
-        {
-            return sensor_msgs::PointCloud2Ptr();
-        }
-
-        // Fill in new PointCloud2 message (2D image-like layout)
-        sensor_msgs::PointCloud2Ptr points_msg = 
-            boost::make_shared<sensor_msgs::PointCloud2>();
-        points_msg->header = l_image_msg.header;
-
-        points_msg->height = stereo_features.size();
-        points_msg->width  = 1;
-        points_msg->fields.resize(7);
-        points_msg->fields[0].name = "x";
-        points_msg->fields[0].offset = 0;
-        points_msg->fields[0].count = 1;
-        points_msg->fields[0].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[1].name = "y";
-        points_msg->fields[1].offset = 4;
-        points_msg->fields[1].count = 1;
-        points_msg->fields[1].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[2].name = "z";
-        points_msg->fields[2].offset = 8;
-        points_msg->fields[2].count = 1;
-        points_msg->fields[2].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[3].name = "rgb";
-        points_msg->fields[3].offset = 12;
-        points_msg->fields[3].count = 1;
-        points_msg->fields[3].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[4].name = "key_point_x";
-        points_msg->fields[4].offset = 16;
-        points_msg->fields[4].count = 1;
-        points_msg->fields[4].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[5].name = "key_point_y";
-        points_msg->fields[5].offset = 20;
-        points_msg->fields[5].count = 1;
-        points_msg->fields[5].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->fields[6].name = "descriptor";
-        points_msg->fields[6].offset = 24;
-        const int DESCRIPTOR_SIZE = stereo_features[0].descriptor.cols;
-        points_msg->fields[6].count = DESCRIPTOR_SIZE;
-        points_msg->fields[6].datatype = sensor_msgs::PointField::FLOAT32;
-        points_msg->point_step = 24 + sizeof(float) * DESCRIPTOR_SIZE;
-        points_msg->row_step = points_msg->point_step * points_msg->width;
-        points_msg->data.resize(points_msg->row_step * points_msg->height);
-        points_msg->is_dense = false; // there may be invalid points
-
-        for (size_t i = 0; i < stereo_features.size(); ++i)
-        {
-            int offset = i * points_msg->point_step;
-            const cv::Point3d& point = stereo_features[i].world_point;
-            float x = point.x;
-            float y = point.y;
-            float z = point.z;
-            // pack data into point message data
-            memcpy(&points_msg->data[offset + 0], &x, sizeof(float));
-            memcpy(&points_msg->data[offset + 4], &y, sizeof(float));
-            memcpy(&points_msg->data[offset + 8], &z, sizeof(float));
-            cv::Vec3b bgr = stereo_features[i].color;
-            int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-            memcpy(&points_msg->data[offset + 12], &rgb_packed, sizeof(int32_t));
-            const cv::Point2f key_point_pt = stereo_features[i].key_point.pt;
-            memcpy(&points_msg->data[offset + 16], &key_point_pt.x, sizeof(float));
-            memcpy(&points_msg->data[offset + 20], &key_point_pt.y, sizeof(float));
-            const unsigned char* descriptor_data = stereo_features[i].descriptor.data;
-            memcpy(&points_msg->data[offset + 24], descriptor_data, 
-                   sizeof(float) * DESCRIPTOR_SIZE);
-        }
-
-        if (pub_debug_image_.getNumSubscribers() > 0)
-        {
-            cv::Mat canvas = cv_ptr_left->image.clone();
-            paintStereoFeatures(canvas, stereo_features);
-            cv_bridge::CvImage cv_image;
-            cv_image.header = cv_ptr_left->header;
-            cv_image.encoding = cv_ptr_left->encoding;
-            cv_image.image = canvas;
-            pub_debug_image_.publish(cv_image.toImageMsg());
-        }
-        return points_msg;
+        // if anything went wrong, return empty msg
+        return vision_msgs::StereoFeaturesPtr();
     }
 
     /**
@@ -275,7 +285,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     bool extractFeaturesSrvCb(ExtractFeatures::Request& request,
                          ExtractFeatures::Response& response)
     {
-         sensor_msgs::PointCloud2Ptr features = extractFeatures(
+         vision_msgs::StereoFeaturesPtr features = extractFeatures(
             request.left_image, request.right_image,
             request.left_camera_info, request.right_camera_info);
          if (features.get() == NULL)
@@ -317,8 +327,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     bool subscribed_; // stores if anyone is subscribed
 
     // Publications
-    ros::Publisher pub_points2_;
+    ros::Publisher pub_features_;
     ros::Publisher pub_debug_image_;
+    ros::Publisher pub_points_;
 
     // Processing state (note: only safe because we're single-threaded!)
     image_geometry::StereoCameraModel model_;

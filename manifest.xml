@@ -18,6 +18,7 @@
   <depend package="camera_calibration_parsers" />
   <depend package="pluginlib" />
   <depend package="nodelet" />
+  <depend package="vision_msgs" />
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />
