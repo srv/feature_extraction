@@ -6,15 +6,8 @@
 
 using namespace stereo_feature_extraction;
 
-StereoFeatureExtractor::StereoFeatureExtractor()
-{
-}
-
-StereoFeatureExtractor::StereoFeatureExtractor(
-        const FeatureExtractor::Ptr& feature_extractor,
-        const StereoCameraModel::Ptr& camera_model) :
-    feature_extractor_(feature_extractor),
-    stereo_camera_model_(camera_model)
+StereoFeatureExtractor::StereoFeatureExtractor() :
+    match_method_(KEY_POINT_TO_KEY_POINT)
 {
 }
 
@@ -30,9 +23,113 @@ void StereoFeatureExtractor::setCameraModel(
     stereo_camera_model_ = model;
 }
 
+void StereoFeatureExtractor::setMatchMethod(const MatchMethod& match_method)
+{
+    match_method_ = match_method;
+}
+
+
+std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
+        const cv::Mat& image_left, const cv::Mat& image_right, 
+        double max_y_diff, double max_distance) const
+{
+    assert(feature_extractor_.get() != NULL);
+    assert(stereo_camera_model_.get() != NULL);
+
+    std::vector<KeyPoint> key_points_left;
+    cv::Mat descriptors_left;
+    feature_extractor_->extract(image_left, cv::Mat(), key_points_left, 
+            descriptors_left);
+
+    std::vector<StereoFeature> stereo_features;
+    for (size_t i = 0; i < key_points_left.size(); ++i)
+    {
+        const KeyPoint& key_point_left = key_points_left[i];
+        double distance;
+        cv::Point2f point_right = findCorrespondenceBM(image_left, 
+                key_point_left.pt, image_right, max_y_diff, &distance);
+        if (distance < max_distance)
+        {
+            StereoFeature stereo_feature;
+            stereo_feature.world_point = 
+                stereo_camera_model_->computeWorldPoint(key_point_left.pt, 
+                                                        point_right);
+            stereo_feature.key_point = key_point_left;
+            cv::Mat descriptor = descriptors_left.row(i);
+            descriptor.copyTo(stereo_feature.descriptor);
+            stereo_feature.color = 
+                image_left.at<cv::Vec3b>(key_point_left.pt.y,
+                                        key_point_left.pt.x);
+            stereo_features.push_back(stereo_feature);
+        }
+    }
+    return stereo_features;
+}
+
+cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_left,
+        const cv::Point2f& point_left, const cv::Mat& image_right, 
+        double max_y_dist, double* distance)
+{
+    int template_size = 15;
+    int half_template_size = template_size / 2 + 1;
+    if (point_left.x > half_template_size &&
+        point_left.y > half_template_size &&
+        point_left.x < image_left.cols - half_template_size &&
+        point_left.y < image_left.rows - half_template_size)
+    {
+        int template_x = static_cast<int>(point_left.x - half_template_size);
+        int template_y = static_cast<int>(point_left.y - half_template_size);
+        cv::Rect template_roi(template_x, template_y, template_size, template_size);
+        cv::Mat match_template = cv::Mat(image_left, template_roi);
+        
+        cv::Rect search_roi(0, point_left.y - max_y_dist - half_template_size, image_right.cols,
+                2.0 * max_y_dist + template_size);
+        cv::Mat search_image(image_right, search_roi);
+
+        cv::Mat result_image;
+        cv::matchTemplate(search_image, match_template, result_image, CV_TM_SQDIFF);
+
+        double min_val, max_val;
+        cv::Point max_loc;
+        cv::Point min_loc;
+        cv::minMaxLoc(result_image, &min_val, &max_val, &min_loc, &max_loc);
+
+        /*
+        cv::Point paint_point = min_loc;
+
+        cv::Mat canvas = search_image.clone();
+        cv::rectangle(canvas, paint_point, paint_point + cv::Point(template_size, template_size), cv::Scalar(0, 255, 0));
+
+        cv::imshow("template", match_template);
+        cv::imshow("search_image", canvas);
+        cv::imshow("result_image", result_image / max_val);
+
+        std::cout << "disp = " << point_left.x - min_loc.x - half_template_size << std::endl;
+        */
+    }
+    
+    return cv::Point2f(0, 0);
+}
+
 std::vector<StereoFeature> StereoFeatureExtractor::extract(
         const cv::Mat& image_left, const cv::Mat& image_right, 
-        const cv::Mat& mask_left, const cv::Mat& mask_right,
+        double max_y_diff, double max_angle_diff, 
+        int max_size_diff) const
+{
+    if (match_method_ == KEY_POINT_TO_KEY_POINT)
+    {
+        return extractKeyPointToKeyPoint(image_left, image_right,
+                max_y_diff, max_angle_diff, max_size_diff);
+    }
+    else
+    {
+        return extractKeyPointToBlock(image_left, image_right,
+                max_y_diff, 100);
+    }
+}
+
+std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
+        const cv::Mat& image_left, const cv::Mat& image_right, 
         double max_y_diff, double max_angle_diff, 
         int max_size_diff) const
 {
@@ -41,12 +138,12 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
 
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
-    feature_extractor_->extract(image_left, mask_left, key_points_left, 
+    feature_extractor_->extract(image_left, cv::Mat(), key_points_left, 
             descriptors_left);
 
     std::vector<KeyPoint> key_points_right;
     cv::Mat descriptors_right;
-    feature_extractor_->extract(image_right, mask_right, key_points_right,
+    feature_extractor_->extract(image_right, cv::Mat(), key_points_right,
             descriptors_right);
 
     cv::Mat match_mask;

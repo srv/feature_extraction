@@ -20,6 +20,12 @@ class StereoFeatureExtractor
 
   public:
 
+    enum MatchMethod
+    {
+        KEY_POINT_TO_KEY_POINT,
+        KEY_POINT_TO_BLOCK
+    };
+
     /**
     * Constructs an empty stereo feature extractor. Make sure to call
     * setFeatureExtractor and setCameraModel before usage.
@@ -27,19 +33,14 @@ class StereoFeatureExtractor
     StereoFeatureExtractor();
 
     /**
-    * Constructs a stereo feature extractor with given parameters:
-    * \param feature_extractor the extractor to use to extract features from
-    *        each stereo image
-    * \param model the camera model that is used to compute the 3d
-    *        position of features
-    */
-    StereoFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor,
-            const StereoCameraModel::Ptr& model);
-
-    /**
     * \param feature_extractor new feature extractor to use
     */
     void setFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor);
+
+    /**
+    * \param match_method match method to use
+    */
+    void setMatchMethod(const MatchMethod& match_method);
 
     /**
     * \param model new camera model
@@ -55,8 +56,6 @@ class StereoFeatureExtractor
     * stereo camera model.
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-    * \param mask_left the mask where to extract key points seen in left image
-    * \param mask_right the mask where to extract key points seen in right image
     * \param max_y_diff the maximum difference of the y coordinates of
     *        left and right keypoints to be accepted as match candidate
     * \param max_angle_diff the maximum difference of the keypoint orientation
@@ -65,9 +64,9 @@ class StereoFeatureExtractor
     * \return vector of stereo features
     */
     std::vector<StereoFeature> extract(const cv::Mat& image_left, 
-            const cv::Mat& image_right, const cv::Mat& mask_left, 
-            const cv::Mat& mask_right, double max_y_diff, 
+            const cv::Mat& image_right, double max_y_diff, 
             double max_angle_diff, int max_size_diff) const;
+
 
     /**
     * Computes a match candidate mask that fulfills epipolar constraints, i.e.
@@ -129,8 +128,62 @@ class StereoFeatureExtractor
 
   protected:
 
+    /**
+    * Extracts stereo keypoints from given rectified stereo image pair.
+    * Keypoints for each image are computed, a match mask that preserves
+    * the epipolar constraints (given by max* parameters) is computed, 
+    * descriptors for keypoints are computed and matched.
+    * Afterwards, for each match a 3d point is computed based on a
+    * stereo camera model.
+    * \param image_left the left rectified image
+    * \param image_right the right rectified image
+    * \param max_y_diff the maximum difference of the y coordinates of
+    *        left and right keypoints to be accepted as match candidate
+    * \param max_angle_diff the maximum difference of the keypoint orientation
+    *        in degrees
+    * \param max_size_diff the maximum difference of keypoint sizes to accept
+    * \return vector of stereo features
+    */
+    std::vector<StereoFeature> extractKeyPointToKeyPoint(const cv::Mat& image_left, 
+            const cv::Mat& image_right, double max_y_diff, 
+            double max_angle_diff, int max_size_diff) const;
+
+    /**
+    * Extracts stereo keypoints from given rectified stereo image pair
+    * using a combination of key point detection and block matching.
+    * Keypoints for the left image are computed and corresponding points
+    * in the right image are found by block matching, preserving the given 
+    * constraints.
+    * Afterwards, for each match a 3d point is computed based on a
+    * stereo camera model.
+    * \param image_left the left rectified image
+    * \param image_right the right rectified image
+    * \param max_y_diff the maximum difference of the y coordinates of
+    *        left and right points to be accepted as match
+    * \param max_distance the block matching threshold
+    * \return vector of stereo features
+    */
+    std::vector<StereoFeature> extractKeyPointToBlock(const cv::Mat& image_left, 
+            const cv::Mat& image_right,  double max_y_diff, 
+            double max_distance) const;
+
+    /**
+    * Finds a correspondence using block matching
+    * \param image_left the left image
+    * \param point_left the left point which neighborhood is used as search 
+    *        pattern
+    * \param image_right the search image
+    * \param max_y_dist tha maximum distance in y that may have the matching points
+    * \param distance the distance of the matching blocks is saved here
+    */
+    static cv::Point2f findCorrespondenceBM(const cv::Mat& image_left,
+        const cv::Point2f& point_left, const cv::Mat& image_right, 
+        double max_y_dist, double* distance);
+
     FeatureExtractor::Ptr feature_extractor_;
     StereoCameraModel::Ptr stereo_camera_model_;
+
+    MatchMethod match_method_;
 
 };
 
