@@ -182,14 +182,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             // Update the camera model
             stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
 
-            cv::Mat mask;
             const cv::Mat& left_image = cv_ptr_left->image;
             const cv::Mat& right_image = cv_ptr_right->image;
 
             // Calculate stereo features
             std::vector<StereoFeature> stereo_features = 
                 stereo_feature_extractor_.extract(left_image, right_image, 
-                        mask, mask, max_y_diff_, max_angle_diff_, max_size_diff_);
+                        max_y_diff_, max_angle_diff_, max_size_diff_);
 
             NODELET_INFO("%i stereo features", stereo_features.size());
             if (stereo_features.size() == 0)
