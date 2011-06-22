@@ -21,6 +21,7 @@
 #include "stereo_camera_model.h"
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
+#include "drawing.h"
 
 #include "stereo_feature_extraction/ExtractFeatures.h" // generated srv header
 
@@ -52,7 +53,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         pub_points_ = nh.advertise<sensor_msgs::PointCloud2>("stereo_feature_points", 1,
                 connect_cb, connect_cb);
 
-        pub_debug_image_ = nh.advertise<sensor_msgs::Image>("debug_image", 1,
+        pub_debug_image_ = nh.advertise<sensor_msgs::Image>("stereo_features_debug_image", 1,
                 connect_cb, connect_cb);
 
         // Synchronize inputs. Topic subscriptions happen on demand in the 
@@ -190,7 +191,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 stereo_feature_extractor_.extract(left_image, right_image, 
                         max_y_diff_, max_angle_diff_, max_size_diff_);
 
-            NODELET_INFO("%lu stereo features extracted.", stereo_features.size());
+            NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
             {
                 return vision_msgs::StereoFeaturesPtr();
@@ -256,7 +257,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             if (pub_debug_image_.getNumSubscribers() > 0)
             {
                 cv::Mat canvas;
-                paintStereoFeatures(canvas, cv_ptr_left->image, 
+                drawStereoFeatures(canvas, cv_ptr_left->image, 
                                     cv_ptr_right->image, stereo_features);
                 cv_bridge::CvImage cv_image;
                 cv_image.header = cv_ptr_left->header;
@@ -295,46 +296,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
          }
     }
 
-    void paintStereoFeatures(cv::Mat& canvas,
-            const cv::Mat& left_image, 
-            const cv::Mat& right_image, 
-            const std::vector<StereoFeature>& stereo_features)
-    {
-        // create one big image
-        assert(left_image.type() == right_image.type());
-        int rows = std::max(left_image.rows, right_image.rows);
-        canvas.create(rows, left_image.cols + right_image.cols, 
-                left_image.type());
-        cv::Mat left_canvas_hdr(canvas, cv::Range(0, left_image.rows),
-                cv::Range(0, left_image.cols));
-        cv::Mat right_canvas_hdr(canvas, 
-                cv::Range(0, right_image.rows),
-                cv::Range(left_image.cols, left_image.cols + right_image.cols));
-        left_image.copyTo(left_canvas_hdr);
-        right_image.copyTo(right_canvas_hdr);
-
-        // paint stereo features
-        for (size_t i = 0; i < stereo_features.size(); ++i)
-        {
-            paintKeyPoint(left_canvas_hdr, stereo_features[i].key_point_left);
-            paintKeyPoint(right_canvas_hdr, stereo_features[i].key_point_right);
-            cv::Point p1 = stereo_features[i].key_point_left.pt;
-            cv::Point p2 = stereo_features[i].key_point_right.pt;
-            p2.x += left_image.cols;
-            p2.y += left_image.rows;
-            cv::line(canvas, p1, p2, cv::Scalar(0, 255, 0), 1); 
-        }
-    }
-
-    void paintKeyPoint(cv::Mat& image, const KeyPoint& key_point)
-    {
-        cv::Point center(cvRound(key_point.pt.x),
-                            cvRound(key_point.pt.y));
-        int radius = cvRound(key_point.size);
-        cv::circle(image, center, radius, cv::Scalar(0, 255, 0), 2);
-    }
-
-            
     boost::shared_ptr<image_transport::ImageTransport> it_;
     image_transport::SubscriberFilter sub_l_image_;
     image_transport::SubscriberFilter sub_r_image_;

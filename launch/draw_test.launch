@@ -1,0 +1,13 @@
+<launch>
+
+    <include file="$(find stereo_feature_extraction)/launch/image_proc_extractor.launch" />
+
+    <node name="player" pkg="rosbag" type="play" args="-l $(env ROS_BAGFILES_PATH)/keyboard_box_narrow_2011-05-26-15-28-33.bag" />
+
+    <node name="image_view" pkg="image_view" type="image_view">
+        <remap from="image" to="/forward_stereo_camera/stereo_features_debug_image" />
+    </node>
+
+
+</launch>
+

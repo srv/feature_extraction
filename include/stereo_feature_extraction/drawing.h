@@ -1,6 +1,8 @@
 #ifndef DRAWING_H
 #define DRAWING_H
 
+#include <vector>
+
 namespace cv
 {
     class Mat;
@@ -9,6 +11,7 @@ namespace cv
 namespace stereo_feature_extraction
 {
     class KeyPoint;
+    class StereoFeature;
 
     void drawKeyPoint(cv::Mat& image, const KeyPoint& key_point);
 

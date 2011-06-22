@@ -54,7 +54,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
             stereo_feature.world_point = 
                 stereo_camera_model_->computeWorldPoint(key_point_left.pt, 
                                                         point_right);
-            stereo_feature.key_point = key_point_left;
+            stereo_feature.key_point_left = key_point_left;
             cv::Mat descriptor = descriptors_left.row(i);
             descriptor.copyTo(stereo_feature.descriptor);
             stereo_feature.color = 
