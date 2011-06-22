@@ -15,7 +15,8 @@ namespace stereo_feature_extraction
 struct StereoFeature
 {   
     cv::Point3d world_point;
-    KeyPoint key_point;
+    KeyPoint key_point_left;
+    KeyPoint key_point_right;
     cv::Mat descriptor;
     cv::Vec3b color;
 };
