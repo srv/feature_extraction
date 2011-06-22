@@ -67,7 +67,8 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
         stereo_features[i].world_point = 
             stereo_camera_model_->computeWorldPoint(key_point_left.pt, 
                                                     key_point_right.pt);
-        stereo_features[i].key_point = key_point_left;
+        stereo_features[i].key_point_left = key_point_left;
+        stereo_features[i].key_point_right = key_point_right;
         cv::Mat descriptor = descriptors_left.row(index_left);
         descriptor.copyTo(stereo_features[i].descriptor);
         stereo_features[i].color = 

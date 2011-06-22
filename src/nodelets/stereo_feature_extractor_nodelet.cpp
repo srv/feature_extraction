@@ -191,7 +191,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 stereo_feature_extractor_.extract(left_image, right_image, 
                         mask, mask, max_y_diff_, max_angle_diff_, max_size_diff_);
 
-            NODELET_INFO("%i stereo features", stereo_features.size());
+            NODELET_INFO("%lu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
             {
                 return vision_msgs::StereoFeaturesPtr();
@@ -249,13 +249,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 memcpy(&points_msg.data[offset + 12], &rgb_packed, sizeof(int32_t));
 
                 // feature array
-                vision_msgs::Feature feature;
-                feature.x = stereo_features[i].key_point.pt.x;
-                feature.y = stereo_features[i].key_point.pt.y;
-                feature.descriptor = stereo_features[i].descriptor;
-
-                features_msg->features[i].x = stereo_features[i].key_point.pt.x;
-                features_msg->features[i].y = stereo_features[i].key_point.pt.y;
+                features_msg->features[i].x = stereo_features[i].key_point_left.pt.x;
+                features_msg->features[i].y = stereo_features[i].key_point_left.pt.y;
                 features_msg->features[i].descriptor = stereo_features[i].descriptor;
             }
 
@@ -305,9 +300,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     {
         for (size_t i = 0; i < stereo_features.size(); ++i)
         {
-            cv::Point center(cvRound(stereo_features[i].key_point.pt.x),
-                             cvRound(stereo_features[i].key_point.pt.y));
-            int radius = cvRound(stereo_features[i].key_point.size / 2);
+            cv::Point center(cvRound(stereo_features[i].key_point_left.pt.x),
+                             cvRound(stereo_features[i].key_point_left.pt.y));
+            int radius = cvRound(stereo_features[i].key_point_left.size / 2);
             cv::circle(image, center, radius, cv::Scalar(0, 255, 0), 2);
         }
     }
