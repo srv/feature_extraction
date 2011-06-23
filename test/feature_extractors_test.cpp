@@ -36,6 +36,34 @@ TEST(Extractor, runTest)
     }
 }
 
+TEST(Extractor, maxNumPointsTest)
+{
+    std::vector<std::string> extractor_names;
+    extractor_names.push_back("CvSURF");
+    extractor_names.push_back("SURF");
+
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+    cv::Mat image = cv::imread(path + "/data/black_box.jpg");
+    ASSERT_FALSE(image.empty());
+
+    for (size_t i = 0; i < extractor_names.size(); ++i)
+    {
+        for (int p = 10; p <= 100; p+=10)
+        {
+            FeatureExtractor::Ptr extractor =
+                FeatureExtractorFactory::create(extractor_names[i]);
+
+            cv::Mat mask;
+            std::vector<KeyPoint> key_points;
+            cv::Mat descriptors;
+            extractor->setMaxNumKeyPoints(p);
+            extractor->extract(image, mask, key_points, descriptors);
+            EXPECT_LE((int)key_points.size(), p);
+        }
+    }
+}
+
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char **argv){
     testing::InitGoogleTest(&argc, argv);
