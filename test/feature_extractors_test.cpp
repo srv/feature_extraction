@@ -48,6 +48,7 @@ TEST(Extractor, maxNumPointsTest)
 
     for (size_t i = 0; i < extractor_names.size(); ++i)
     {
+        std::cout << "*** Extractor is " << extractor_names[i] << " ***" << std::endl;
         for (int p = 10; p <= 100; p+=10)
         {
             FeatureExtractor::Ptr extractor =
@@ -59,6 +60,8 @@ TEST(Extractor, maxNumPointsTest)
             extractor->setMaxNumKeyPoints(p);
             extractor->extract(image, mask, key_points, descriptors);
             EXPECT_LE((int)key_points.size(), p);
+            std::cout << "extracted " << key_points.size() 
+                << " key points (max was set to " << p << ")" << std::endl;
         }
     }
 }

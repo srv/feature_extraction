@@ -19,6 +19,56 @@
 
 using namespace stereo_feature_extraction;
 
+TEST(StereoFeatureExtractor, runTest)
+{
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+    path += "/data/";
+
+    // load image
+    cv::Mat image_left = cv::imread(path + "left_100cm.jpg");
+    ASSERT_FALSE(image_left.empty());
+    cv::Mat image_right = cv::imread(path + "right_100cm.jpg");
+    ASSERT_FALSE(image_right.empty());
+
+    FeatureExtractor::Ptr feature_extractor = 
+        FeatureExtractorFactory::create("SURF");
+
+    // read calibration data to fill stereo camera model
+    std::string left_file = path + "real_calibration_left.yaml";
+    std::string right_file = path + "real_calibration_right.yaml";
+
+    StereoCameraModel::Ptr stereo_camera_model = 
+        StereoCameraModel::Ptr(new StereoCameraModel());
+    stereo_camera_model->fromCalibrationFiles(left_file, right_file);
+
+    StereoFeatureExtractor extractor;
+    extractor.setFeatureExtractor(feature_extractor);
+    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
+    extractor.setCameraModel(stereo_camera_model);
+
+    double max_y_diff = 0.5;
+    double max_angle_diff = 2.0;
+    int max_size_diff = 0;
+    double min_depth = 0.10;
+    double max_depth = 10.0;
+    double time = (double)cv::getTickCount();
+    std::vector<StereoFeature> stereo_features = 
+        extractor.extract(image_left, image_right,
+                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+    time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
+    std::cout << "Key point to key point matching: found " << stereo_features.size() << " stereo features" 
+        << " in " << time << "ms." << std::endl;
+
+    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_BLOCK);
+    time = (double)cv::getTickCount();
+    stereo_features = extractor.extract(image_left, image_right,
+                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+    time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
+    std::cout << "Key point to block matching: found " << stereo_features.size() << " stereo features" 
+        << " in " << time << "ms." << std::endl;
+
+}
+
 TEST(StereoFeatureExtractor, depthResolutionTest)
 {
     std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
