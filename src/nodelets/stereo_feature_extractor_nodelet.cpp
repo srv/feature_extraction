@@ -23,7 +23,7 @@
 #include "feature_extractor_factory.h"
 #include "drawing.h"
 
-#include "stereo_feature_extraction/ExtractFeatures.h" // generated srv header
+#include "stereo_feature_extraction/SetRegionOfInterest.h" // generated srv header
 
 namespace stereo_feature_extraction
 {
@@ -110,8 +110,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
 
         // advertise the service
-        service_server_ = nh.advertiseService("extract_features", 
-                &StereoFeatureExtractorNodelet::extractFeaturesSrvCb, this);
+        service_server_ = nh.advertiseService("set_region_of_interest", 
+                &StereoFeatureExtractorNodelet::setRegionOfInterestSrvCb, this);
 
 
         NODELET_INFO("Waiting for client subscriptions.");
@@ -149,6 +149,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                  const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                  const sensor_msgs::CameraInfoConstPtr& r_info_msg)
     {
+        if (region_of_interest_.area() == 0)
+        {
+            // invalid roi, set to image size
+            region_of_interest_ = 
+                cv::Rect(0, 0, l_image_msg->width, l_image_msg->height);
+        }
+           
         vision_msgs::StereoFeaturesPtr features_msg =
             extractFeatures(*l_image_msg, *r_image_msg,
                             *l_info_msg, *r_info_msg);
@@ -262,6 +269,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 cv::Mat canvas;
                 drawStereoFeatures(canvas, cv_ptr_left->image, 
                                     cv_ptr_right->image, stereo_features);
+                cv::rectangle(canvas, region_of_interest_.tl(),
+                        region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
                 cv_bridge::CvImage cv_image;
                 cv_image.header = cv_ptr_left->header;
                 cv_image.encoding = cv_ptr_left->encoding;
@@ -282,21 +291,19 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     /**
     * implementation of the service
     */
-    bool extractFeaturesSrvCb(ExtractFeatures::Request& request,
-                         ExtractFeatures::Response& response)
+    bool setRegionOfInterestSrvCb(SetRegionOfInterest::Request& request,
+                         SetRegionOfInterest::Response& response)
     {
-         vision_msgs::StereoFeaturesPtr features = extractFeatures(
-            request.left_image, request.right_image,
-            request.left_camera_info, request.right_camera_info);
-         if (features.get() == NULL)
-         {
-             return false;
-         }
-         else
-         {
-            response.features = *features;
-            return true;
-         }
+        region_of_interest_.x = request.x;
+        region_of_interest_.y = request.y;
+        region_of_interest_.width = request.width;
+        region_of_interest_.height = request.height;
+        ROS_INFO("Region of interest set to: (%i, %i), %ix%i due to service call",
+                region_of_interest_.x,
+                region_of_interest_.y,
+                region_of_interest_.width,
+                region_of_interest_.height);
+        return true;
     }
 
     boost::shared_ptr<image_transport::ImageTransport> it_;
@@ -341,6 +348,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // values that adjust the allowed disparity based on calibration
     double min_depth_; // in meters
     double max_depth_; // in meters
+
+    // the current roi
+    cv::Rect region_of_interest_;
  
 };
 
