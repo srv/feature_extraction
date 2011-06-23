@@ -7,7 +7,13 @@ using namespace stereo_feature_extraction;
 static const int OCTAVES = 5;
 static const int INIT_STEP = 2;
 static const int THRESHOLD_RESPONSE = 26;
-static const int MAX_NUM_POINTS = 200;
+static const unsigned int MAX_NUM_POINTS = 200;
+
+
+bool keyPointSort(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2)
+{
+    return kp1.response > kp2.response;
+}
 
 SurfExtractor::SurfExtractor() :
     surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE)
@@ -36,6 +42,9 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     surf_.detect(cv_key_points);
     if (cv_key_points.size() > MAX_NUM_POINTS)
     {
+        std::partial_sort(cv_key_points.begin(), 
+                cv_key_points.begin() + MAX_NUM_POINTS, 
+                cv_key_points.end(), keyPointSort);
         cv_key_points.resize(MAX_NUM_POINTS);
     }
     surf_.compute(cv_key_points, descriptors);
@@ -46,3 +55,4 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
         key_points[i] = KeyPoint(cv_key_points[i]);
     }
 }
+
