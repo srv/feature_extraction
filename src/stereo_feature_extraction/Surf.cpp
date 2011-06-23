@@ -40,17 +40,14 @@ const int Surf::OCTAVES;
 const int Surf::INTERVALS;
 const int Surf::INIT_STEP;
 const float Surf::THRESHOLD_RESPONSE;
-const int Surf::MAX_POINTS;
-const int Surf::BOX_X;
-const int Surf::BOX_Y;
 const float Surf::DESCRIPTOR_SCALE_FACTOR;
 
 const char * Surf::className = "Surf";
 const int Surf::filter_map[OCTAVES][INTERVALS] = {{0, 1, 2, 3},
-                                                   {1, 3, 4, 5},
-                                                   {3, 5, 6, 7},
-                                                   {5, 7, 8, 9},
-                                                   {7, 9, 10, 11}};
+                                                  {1, 3, 4, 5},
+                                                  {3, 5, 6, 7},
+                                                  {5, 7, 8, 9},
+                                                  {7, 9, 10, 11}};
 #define pi 3.14159f
 #define pi2 ( 3.14159f * 2 )
 float Surf::gauss_s1[109] = {0};
@@ -61,65 +58,45 @@ float Surf::gauss_s2[16] = {0};
 Surf::Surf( const cv::Mat & source,
             int octaves,
             int initStep,
-            float threshold,
-            int maxPoints,
-            int boxX,
-            int boxY ) :
+            float threshold ) :
   integral( 0 ),
   imgRows( 0 ),
   imgCols( 0 ),
   pyramide( 0 ),
   pyramideSize( 0 ) {
   init( source );
-  init( octaves, initStep, threshold, maxPoints, boxX, boxY );
+  init( octaves, initStep, threshold );
   //  std::cout << "imgRows " << imgRows
   //  << ", imgCols " << imgCols << std::endl;
 }
 
 Surf::Surf( int octaves,
             int initStep,
-            float threshold,
-            int maxPoints,
-            int boxX,
-            int boxY ) :
+            float threshold ) :
   integral( 0 ),
   imgRows( 0 ),
   imgCols( 0 ),
   pyramide( 0 ),
   pyramideSize( 0 ) {
-  init( octaves, initStep, threshold, maxPoints, boxX, boxY );
+  init( octaves, initStep, threshold );
 }
 
 void Surf::init( int octaves,
                  int initStep,
-                 float threshold,
-                 int maxPoints,
-                 int boxX,
-                 int boxY ) {
+                 float threshold ) {
   tellu( "" );
   pyramide = 0;
   pyramideSize = 0;
   this->octaves = octaves > 0 and octaves < OCTAVES ? octaves : OCTAVES;
   this->initStep = initStep > 0 and initStep <= 6 ? initStep : INIT_STEP;
   this->thresholdResponse = threshold >= 0 ? threshold : THRESHOLD_RESPONSE;
-  this->maxPoints = maxPoints > 0 ? maxPoints : MAX_POINTS;
-  if ( !boxX ) boxX = maxPoints / 10;
-  if ( boxY ) {
-    this->boxX = boxX;
-    this->boxY = boxY;
-  } else {
-    float fraq = imgRows and imgCols ? sqrt((float)imgCols / imgRows) : 1;
-    this->boxX = sqrt(boxX) * fraq;
-    this->boxY = sqrt(boxX) / fraq;
-  }
-//  std::cout << "x " << this->boxX << ", " << this->boxY << std::endl;
-  //  float y1 = -10, y2 = 0, y3 = 10;
-  //  for ( float x = -10; x < 20; x++ ) {
-  //    printf( "% 2.3f, % 2.3f, % 2.3f :  % 2.3f, % 2.3f, % 2.3f\n",
-  //            getAngle( x, y1 ), getAngle( x, y2 ), getAngle( x, y3 ),
-  //           getAngle( y1, x ), getAngle( y2, x ), getAngle( y3, x ) );
-  //  }
-  //  exit( 0 );
+//  float y1 = -10, y2 = 0, y3 = 10;
+//  for ( float x = -10; x < 20; x++ ) {
+//    printf( "% 2.3f, % 2.3f, % 2.3f :  % 2.3f, % 2.3f, % 2.3f\n",
+//            atan2( y1, x ), atan2( y2, x ), atan2( y3, x ),
+//            atan2( x, y1 ), atan2( x, y2 ), atan2( x, y3 ) );
+//  }
+//  exit( 0 );
 
   if ( !gauss_s2[0] ) {
     float gauss25[6][6] = {
@@ -254,20 +231,39 @@ void Surf::operator()( const cv::Mat & source,
 }
 //-------------------------------------------------------
 
-//! Find the image features and write into vector of features
+void Surf::detect( odometry::KeyPoint * & points,
+                   int & length ) {
+#ifdef ODOMETRY
+  tellu( "KeyPoint" );
+  detect();
+  length = surfPoints.size();
+  points = length ? new KeyPoint[length] : 0;
+  for ( int i = 0; i < length; ++i ) {
+    SurfPoint & surfPoint = surfPoints[i];
+    //  std::cout << "keypoint size " << sizeof(KeyPoint) << std::endl;
+    //  std::cout << "keypointheader size " << sizeof(KeyPointHeader) << std::endl;
+    points[i].set( surfPoint.x,
+                   surfPoint.y,
+                   surfPoint.scale,
+                   0,
+                   surfPoint.response,
+                   surfPoint.laplacian );
+  }
+#endif
+}
 
 void Surf::detect( const cv::Mat & source,
                    std::vector<cv::KeyPoint> & keys,
                    const cv::Mat & mask,
                    bool upright ) {
-  tellu( "" );
+  tellu( "cv::Mat" );
   init( source, mask );
   detect( keys, upright );
 }
 
 void Surf::detect( std::vector<cv::KeyPoint> & keys,
                    bool upright ) {
-  tellu( "" );
+  tellu( "std::vector<cv::KeyPoint>" );
   detect();
   keys.clear();
   keys.resize( surfPoints.size() );
@@ -275,21 +271,22 @@ void Surf::detect( std::vector<cv::KeyPoint> & keys,
     keys[i].pt.x = surfPoints[i].x;
     keys[i].pt.y = surfPoints[i].y;
     keys[i].size = surfPoints[i].scale;
-    keys[i].angle = upright ?   ( isInt() ?
-                                  getOrientation<int>( surfPoints[i] ) :
-                                  getOrientation<int64_t>( surfPoints[i] ) *
-                                  ( 360.f / pi2 ) ) : 0;
+    keys[i].angle = upright ? ( isInt() ?
+                                getOrientation<int>( surfPoints[i].x,
+                                                     surfPoints[i].y,
+                                                     surfPoints[i].scale ) :
+                                getOrientation<int64_t>( surfPoints[i].x,
+                                                         surfPoints[i].y,
+                                                         surfPoints[i].scale )
+                                * ( 360.f / pi2 ) ) : 0;
     keys[i].angle += keys[i].angle < 0 ? 360.f : 0;
     keys[i].response = surfPoints[i].response;
+    keys[i].octave = surfPoints[i].octave;
   }
 }
 
 void Surf::detect() {
   tellu( "" );
-
-  surfPoints.clear();
-  extrema.clear();
-
 #ifdef OpenSURFcpp
   double time = cv::getTickCount();
 #endif
@@ -298,10 +295,19 @@ void Surf::detect() {
   timer.a = cv::getTickCount() - time;
   time = cv::getTickCount();
 #endif
+  extrema.clear();
   getExtrema();
-  takeBest();
 #ifdef OpenSURFcpp
   timer.b = cv::getTickCount() - time;
+  time = cv::getTickCount();
+#endif
+  surfPoints.clear();
+  surfPoints.reserve( extrema.size() );
+  for ( unsigned int i = 0; i < extrema.size(); i++ ) {
+    interpolate( extrema[i] );
+  }
+#ifdef OpenSURFcpp
+  timer.c = cv::getTickCount() - time;
 #endif
 }
 
@@ -321,17 +327,16 @@ void Surf::buildPyramide() {
   int width = imgCols / step;
   int height = imgRows / step;
   int m = 1;
-  if (!pyramide)
-  {
+  
+  if ( !pyramide ) {
     pyramideSize = ( octaves + 1 ) * 2;
     pyramide = new Layer * [ pyramideSize ];
     pyramide[0] = new Layer( width, height, step, 2, m );
     pyramide[1] = new Layer( width, height, step, 4, m );
-
     for ( int i = 1; i <= octaves; i++ ) {
-        pyramide[i * 2]     = new Layer( width, height, step, 6, m );
-        pyramide[i * 2 + 1] = new Layer( width, height, step, 8, m );
-        m *= 2;
+      pyramide[i * 2]     = new Layer( width, height, step, 6, m );
+      pyramide[i * 2 + 1] = new Layer( width, height, step, 8, m );
+      m *= 2;
     }
   }
 
@@ -492,7 +497,7 @@ template<class T> void Surf::buildLayer( Layer * layer ) {
       int nd = ( layer->width + l3 + 1 ) * ( ar + l3 + 1 ) + ac + l3 + 1;
       assert( DDxy[na] + DDxy[nb] - DDxy[nc] - DDxy[nd] == Dxy );
 #endif
-      
+
       // Normalise the filter responses with respect to their size
       Dxx *= inverse_area;
       Dyy *= inverse_area;
@@ -527,7 +532,6 @@ void Surf::getExtrema() {
       float * b_responses = b->responses;
       float * m_responses = m->responses;
       float * t_responses = t->responses;
-      int box_height = t->height - border - border - 1;
       // loop over middle response layer at density of the most
       // sparse layer (always top), to find maxima across scale and space
       for ( int y = border + 1; y < t->height - border; ++y ) {
@@ -544,59 +548,34 @@ void Surf::getExtrema() {
           // check the candidate point in the middle layer is above threshold response
           int v = b_v;
           for ( int j = -1; j <= 1; ++j ) {
-            if (
-              b_responses[ v - b_scale ] >= candidate or
-              b_responses[ v           ] >= candidate or
-              b_responses[ v + b_scale ] >= candidate
-              ) {
+            if ( b_responses[ v - b_scale ] >= candidate or
+                 b_responses[ v           ] >= candidate or
+                 b_responses[ v + b_scale ] >= candidate ) {
               goto no_extremum;
             }
             v += b_step;
           }
           v = m_v - m_step;
           for ( int j = -1; j <= 1; ++j ) {
-            if (
-              m_responses[ v - m_scale ] >= candidate or
-              ( j and m_responses[ v ] >= candidate ) or
-              m_responses[ v + m_scale ] >= candidate
-              ) {
+            if ( m_responses[ v - m_scale ] >= candidate or
+                 ( j and m_responses[ v ] >= candidate ) or
+                 m_responses[ v + m_scale ] >= candidate ) {
               goto no_extremum;
             }
             v += m_step;
           }
           v = t_v + x;
           for ( int j = -1; j <= 1; ++j ) {
-            if (
-              t_responses[ v - 1 ] >= candidate or
-              t_responses[ v     ] >= candidate or
-              t_responses[ v + 1 ] >= candidate
-              ) {
+            if ( t_responses[ v - 1 ] >= candidate or
+                 t_responses[ v     ] >= candidate or
+                 t_responses[ v + 1 ] >= candidate ) {
               goto no_extremum;
             }
             v += t_width;
           }
           {
-            int box = boxX *
-                        std::max( 0.f,
-                                  std::min( (float)boxY - 1,
-                                            (float)boxY *
-                                            ( y - border - 1 ) / box_height
-                                            )
-                                  ) +
-                        std::max( 0.f,
-                                  std::min( (float)boxX - 1,
-                                            (float)boxX * ( x - border - 1 ) /
-                                            ( t_width - border - border - 1 )
-                                            )
-                                  );
-            extrema.push_back( Extremum( candidate,
-                                         m->laplacian[ m_v ],
-                                         x,
-                                         y,
-                                         box,
-                                         filter_map[o][i],
-                                         filter_map[o][i + 1],
-                                         filter_map[o][i + 2] ) );
+            extrema.push_back( Extremum( candidate, m->laplacian[ m_v ],
+                                         x, y, o, i ) );
           }
           //-----------------------------------------------
 no_extremum:;
@@ -614,12 +593,12 @@ no_extremum:;
 //! Interpolate scale-space extrema to subpixel accuracy to form an image feature.
 
 void Surf::interpolate( Extremum & extremum ) {
-  tellu( "" );
+//  tellu( "" );
   int x = extremum.x;
   int y = extremum.y;
-  Layer * t = pyramide[extremum.t];
-  Layer * m = pyramide[extremum.m];
-  Layer * b = pyramide[extremum.b];
+  Layer * b = pyramide[filter_map[extremum.octave][extremum.interval  ]];
+  Layer * m = pyramide[filter_map[extremum.octave][extremum.interval+1]];
+  Layer * t = pyramide[filter_map[extremum.octave][extremum.interval+2]];
   // check the middle filter is mid way between top and bottom
 //  assert( ( m->filter - b->filter ) > 0 and
 //          t->filter - m->filter == m->filter - b->filter );
@@ -700,118 +679,73 @@ void Surf::interpolate( Extremum & extremum ) {
                       ( m->filter + p[2] * ( m->filter - b->filter ) );
     surfPoint.laplacian = extremum.laplacian;
     surfPoint.response  = extremum.response;
+    surfPoint.octave    = extremum.octave;
     surfPoints.push_back( surfPoint );
+//  } else {
+//    std::cout << "interpolation failed " << std::endl;
   }
 }
-
-#ifdef SURF_MARKER
-static float ccc[10000] = {0};
-static int ccc_counter = 0;
-static float histogram[12] = {0};
-#endif
-
 
 //-------------------------------------------------------
 
-float minScale[20] = {0};
-
-void Surf::takeBest() {
-  tellu( "" );
-  int boxes = boxX * boxY;
-#ifdef SURF_MARKER
-  ccc_counter++;
-  int mark_counter = 0;
-  float ccount[boxes];
-  memset( &ccount, 0, sizeof( float ) * boxes );
+void Surf::compute( odometry::KeyPoint * points,
+                    int length,
+                    bool upright ) {
+  tellu( "KeyPoint" );
+#ifdef ODOMETRY
+#ifdef OpenSURFcpp
+  double time = cv::getTickCount();
 #endif
-  surfPoints.clear();
-  surfPoints.reserve( extrema.size() );
-  int extrema_size = (int)extrema.size();
-  bool taken[boxes];
-  int count[boxes];
-  memset( &taken, 0, sizeof( bool ) * boxes );
-  memset( &count, 0, sizeof( int ) * boxes );
-  for ( int i = 0; i < extrema_size; ++i ) {
-    count[extrema[i].box]++;
-#ifdef SURF_MARKER
-    if ( true or extrema[i].m < 12 ) {
-      ccount[extrema[i].box]++;
-      mark_counter++;
+  if ( !upright ) {
+    for ( int i = 0; i < length; ++i ) {
+      //       Assign Orientations and extract rotation invariant descriptors
+      points[i].orientation = isInt() ?
+                              getOrientation<int>( points[i].x,
+                                                   points[i].y,
+                                                   points[i].scale ) :
+                              getOrientation<int64_t>( points[i].x,
+                                                       points[i].y,
+                                                       points[i].scale  );
     }
   }
-  int c = 0;
-  for ( int i = 0; i < boxY; i++ ) {
-    for ( int j = 0; j < boxX; j++ ) {
-      ccc[c] += ccount[c] / mark_counter;
-      printf( "% 4i,", (int)( 10000 * ccc[c] / ccc_counter ) );
-      c++;
-    }
-    printf( "\n" );
+  // Main Surf-64 loop assigns orientations and gets descriptors
+#ifdef OpenSURFcpp
+  timer.d = cv::getTickCount() - time;
+  time = cv::getTickCount();
 #endif
-  }
-  int toTake = maxPoints;
-  int free = boxes;
-  bool success = true;
-  while ( success and free ) {
-    success = false;
-    int needed = toTake / free;
-    for ( int i = 0; i < boxes; i++ ) {
-      if ( !taken[i] and count[i] <= needed ) {
-        free--;
-        toTake -= count[i];
-        taken[i] = true;
-        success = true;
-      }
+  for ( int i = 0; i < length; ++i ) {
+    points[i].setDescriptor( 64, 0 );
+    if ( isInt() ) {
+      getDescriptor<int>( points[i].x,
+                          points[i].y,
+                          points[i].scale,
+                          points[i].orientation,
+                          points[i].getDescriptor() );
+    } else {
+      getDescriptor<int64_t>( points[i].x,
+                              points[i].y,
+                              points[i].scale,
+                              points[i].orientation,
+                              points[i].getDescriptor() );
     }
   }
-  for ( int i = 0; i < extrema_size; i++ ) {
-    if ( taken[extrema[i].box] ) interpolate( extrema[i] );
-  }
-  if ( !free ) return;
-  int needed = toTake / free + ( toTake % free ? 1 : 0 );
-  for ( int i = 0; i < boxes; i++ ) {
-    if ( !taken[i] ) {
-      Extremum myExtrema[count[i]];
-      int c = 0;
-      for ( int j = 0; j < extrema_size; j++ ) {
-        if ( extrema[j].box == i ) {
-          //          assert( c < count[i] );
-          myExtrema[c] = extrema[j];
-          c++;
-        }
-      }
-      //      assert ( c == count[i] );
-      sort( myExtrema, myExtrema + count[i] );
-      for ( int j = 0; j < count[i] and j < needed; j++ ) {
-        interpolate( myExtrema[j] );
-      }
-    }
-  }
-  //  for ( int i = 0; i < surfPoints.size(); i++ ) {
-  //    for ( int j = 0; j < 20; j++ ) {
-  //      if ( ( surfPoints[i].scale <  j + 2 ) and
-  //           ( surfPoints[i].scale >  j + 1 ) ) minScale[j]++;
-  //    }
-  //  }
-  //  for ( int j = 0; j < 20; j++ ) {
-  //    std::cout << " ################## min scale = " << minScale[j] << std::endl;
-  //  }
+#ifdef OpenSURFcpp
+  timer.e = cv::getTickCount() - time;
+#endif
+#endif // ODOMETRY
 }
-
-
-//! Describe all features in the supplied vector
 
 void Surf::compute( const cv::Mat & source,
                     std::vector<cv::KeyPoint> & keys,
                     cv::Mat & descriptors ) {
-  tellu( "" );
+  tellu( "cv::Mat" );
   init( source );
   compute( keys, descriptors );
 }
 
 void Surf::compute( std::vector<cv::KeyPoint> & keys,
                     cv::Mat & descriptors ) {
-  tellu( "" );
+  tellu( "std::vector<cv::KeyPoint>" );
   descriptors.create( keys.size(), 64, CV_32FC1 );
   float descriptor[64];
   for ( unsigned int i = 0; i < keys.size(); ++i ) {
@@ -830,76 +764,22 @@ void Surf::compute( std::vector<cv::KeyPoint> & keys,
   }
 }
 
-
-#ifdef ODOMETRY
-void Surf::compute( KeyPoint * points,
-                    bool upright ) {
-  tellu( "" );
-  if ( !surfPoints.size() ) return;
-  for ( unsigned int i = 0; i < surfPoints.size(); ++i ) {
-    SurfPoint & surfPoint = surfPoints[i];
-    points[i].set( surfPoint.x,
-                   surfPoint.y,
-                   surfPoint.scale,
-                   0,
-                   surfPoint.response,
-                   surfPoint.laplacian,
-                   64 );
-  }
-  // Get the size of the vector for fixed loop bounds
-#ifdef OpenSURFcpp
-  double time = cv::getTickCount();
-#endif
-
-  if ( !upright ) {
-    for ( unsigned int i = 0; i < surfPoints.size(); ++i ) {
-      //       Assign Orientations and extract rotation invariant descriptors
-      points[i].orientation = isInt() ?
-                              getOrientation<int>( surfPoints[i] ) :
-                              getOrientation<int64_t>( surfPoints[i] );
-    }
-  }
-  // Main Surf-64 loop assigns orientations and gets descriptors
-#ifdef OpenSURFcpp
-  timer.c = cv::getTickCount() - time;
-  time = cv::getTickCount();
-#endif
-  for ( unsigned int i = 0; i < surfPoints.size(); ++i ) {
-    if ( isInt() ) {
-      getDescriptor<int>( points[i].x,
-                          points[i].y,
-                          points[i].scale,
-                          points[i].orientation,
-                          points[i].getDescriptor() );
-    } else {
-      getDescriptor<int64_t>( points[i].x,
-                              points[i].y,
-                              points[i].scale,
-                              points[i].orientation,
-                              points[i].getDescriptor() );
-    }
-  }
-#ifdef OpenSURFcpp
-  timer.d = cv::getTickCount() - time;
-#endif
-}
-
-#endif
-
 //-------------------------------------------------------
 
 //! Assign the supplied Ipoint an orientation
-template<class T> float Surf::getOrientation( SurfPoint & surfPoint ) {
+template<class T> float Surf::getOrientation( float keyPointX,
+                                              float keyPointY,
+                                              float keyPointScale ) {
   tellu( "" );
   T * data = (T *)integral;
   int width = imgCols - 1;
   int height = imgCols * ( imgRows - 1 );
-  const int scale = DESCRIPTOR_SCALE_FACTOR * surfPoint.scale + 0.5f;
+  const int scale = DESCRIPTOR_SCALE_FACTOR * keyPointScale + 0.5f;
   //  std::cout << "scale " << scale << std::endl;
   const int scaleStep = scale * imgCols;
   const int scale4Step = 4 * scaleStep;
-  const int row = (int)( surfPoint.y - 0.5f ) * imgCols;
-  const int col = surfPoint.x - 0.5f;
+  const int col = keyPointX - 0.5f;
+  const int row = (int)( keyPointY - 0.5f ) * imgCols;
   Angle angle[109];
 
   //  for ( int i=0; i<109; i++ ) assert(angle[i].x == 0 and angle[i].y == 0);
@@ -956,7 +836,7 @@ template<class T> float Surf::getOrientation( SurfPoint & surfPoint ) {
     float gauss = gauss_s1[i];
     angle[i].x *= gauss;
     angle[i].y *= gauss;
-    angle[i].a = getAngle( angle[i].x, angle[i].y );
+    angle[i].a = atan2( angle[i].y, angle[i].x );
   }
 
   std::sort( angle, angle + 109 );
@@ -1012,7 +892,7 @@ template<class T> float Surf::getOrientation( SurfPoint & surfPoint ) {
   }
 
   // assign orientation of the dominant response vector
-  return maxSum ? getAngle( maxSumX, maxSumY ) : 0;
+  return maxSum ? atan2( maxSumY, maxSumX ) : 0;
 }
 
 //-------------------------------------------------------

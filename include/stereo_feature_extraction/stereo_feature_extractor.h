@@ -54,6 +54,7 @@ class StereoFeatureExtractor
     * descriptors for keypoints are computed and matched.
     * Afterwards, for each match a 3d point is computed based on a
     * stereo camera model.
+    *
     * \param image_left the left rectified image
     * \param image_right the right rectified image
     * \param max_y_diff the maximum difference of the y coordinates of
@@ -61,11 +62,15 @@ class StereoFeatureExtractor
     * \param max_angle_diff the maximum difference of the keypoint orientation
     *        in degrees
     * \param max_size_diff the maximum difference of keypoint sizes to accept
+    * \param min_depth the minimum depth (possible distance to an object)
+    *        limits the disparity and therefore the correspondence search range
+    * \param max_depth the maximum depth (possible distance to an object)
     * \return vector of stereo features
     */
     std::vector<StereoFeature> extract(const cv::Mat& image_left, 
             const cv::Mat& image_right, double max_y_diff, 
-            double max_angle_diff, int max_size_diff) const;
+            double max_angle_diff, int max_size_diff,
+            double min_depth, double max_depth) const;
 
 
     /**
@@ -83,13 +88,16 @@ class StereoFeatureExtractor
     * \param max_angle_diff the maximum difference of the keypoint orientation
     *        in degrees
     * \param max_size_diff the maximum difference of keypoint sizes to accept
+    * \param min_disparity minimum allowed disparity
+    * \param max_disparity maximum allowed disparity
     *
     */
     static void computeMatchMask(
             const std::vector<KeyPoint>& key_points_left,
             const std::vector<KeyPoint>& key_points_right,
             cv::Mat& match_mask, double max_y_diff,
-            double max_angle_diff, int max_size_diff);
+            double max_angle_diff, int max_size_diff,
+            double min_disparity, double max_disparity);
 
     /**
     * Matches two sets of descriptors using cross check, i.e. a match
@@ -142,11 +150,15 @@ class StereoFeatureExtractor
     * \param max_angle_diff the maximum difference of the keypoint orientation
     *        in degrees
     * \param max_size_diff the maximum difference of keypoint sizes to accept
-    * \return vector of stereo features
+    * \param min_depth the minimum depth (possible distance to an object)
+    *        limits the disparity and therefore the correspondence search range
+    * \param max_depth the maximum depth (possible distance to an object)
+     * \return vector of stereo features
     */
     std::vector<StereoFeature> extractKeyPointToKeyPoint(const cv::Mat& image_left, 
             const cv::Mat& image_right, double max_y_diff, 
-            double max_angle_diff, int max_size_diff) const;
+            double max_angle_diff, int max_size_diff,
+            double min_depth, double max_depth) const;
 
     /**
     * Extracts stereo keypoints from given rectified stereo image pair

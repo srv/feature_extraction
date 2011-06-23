@@ -114,12 +114,12 @@ cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_le
 std::vector<StereoFeature> StereoFeatureExtractor::extract(
         const cv::Mat& image_left, const cv::Mat& image_right, 
         double max_y_diff, double max_angle_diff, 
-        int max_size_diff) const
+        int max_size_diff, double min_depth, double max_depth) const
 {
     if (match_method_ == KEY_POINT_TO_KEY_POINT)
     {
         return extractKeyPointToKeyPoint(image_left, image_right,
-                max_y_diff, max_angle_diff, max_size_diff);
+                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
     }
     else
     {
@@ -131,7 +131,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
 std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
         const cv::Mat& image_left, const cv::Mat& image_right, 
         double max_y_diff, double max_angle_diff, 
-        int max_size_diff) const
+        int max_size_diff, double min_depth, double max_depth) const
 {
     assert(feature_extractor_.get() != NULL);
     assert(stereo_camera_model_.get() != NULL);
@@ -146,9 +146,12 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
     feature_extractor_->extract(image_right, cv::Mat(), key_points_right,
             descriptors_right);
 
+    double min_disparity = stereo_camera_model_->getDisparity(max_depth);
+    double max_disparity = stereo_camera_model_->getDisparity(min_depth);
+
     cv::Mat match_mask;
     computeMatchMask(key_points_left, key_points_right, match_mask, max_y_diff,
-            max_angle_diff, max_size_diff);
+            max_angle_diff, max_size_diff, min_disparity, max_disparity);
 
     std::vector<cv::DMatch> matches;
     //crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);
@@ -180,7 +183,7 @@ void StereoFeatureExtractor::computeMatchMask(
         const std::vector<KeyPoint>& key_points_left,
         const std::vector<KeyPoint>& key_points_right,
         cv::Mat& match_mask, double max_y_diff, double max_angle_diff, 
-        int max_size_diff)
+        int max_size_diff, double min_disparity, double max_disparity)
 {
     if (key_points_left.empty() || key_points_right.empty())
     {
@@ -198,8 +201,10 @@ void StereoFeatureExtractor::computeMatchMask(
             double disparity = keypoint1.pt.x - keypoint2.pt.x;
             double angle_diff = std::abs(keypoint1.angle - keypoint2.angle);
             angle_diff = std::min(360 - angle_diff, angle_diff);
+
             int size_diff = std::abs(keypoint1.size - keypoint2.size);
-            if (y_diff <= max_y_diff && disparity > 0 && angle_diff <= max_angle_diff && 
+            if (y_diff <= max_y_diff && disparity > min_disparity && 
+                disparity <= max_disparity && angle_diff <= max_angle_diff && 
                 keypoint1.octave == keypoint2.octave && size_diff <= max_size_diff)
             {
                 match_mask.at<unsigned char>(r, c) = 255;

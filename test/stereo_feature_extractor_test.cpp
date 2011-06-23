@@ -1,60 +1,47 @@
 #include <gtest/gtest.h>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "ros/package.h"
+#include <ros/package.h>
+
+#include <pcl/point_types.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/filters/project_inliers.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
 
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
+#include "drawing.h"
 #include "sensor_msgs/CameraInfo.h"
 #include "image_geometry/stereo_camera_model.h"
 
 
 using namespace stereo_feature_extraction;
 
-TEST(StereoFeatureExtractor, runTest)
+TEST(StereoFeatureExtractor, depthResolutionTest)
 {
     std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
 
-    // load image
-    cv::Mat image_left = cv::imread(path + "/data/black_box.jpg");
-    ASSERT_FALSE(image_left.empty());
-    cv::Mat image_right = cv::Mat(image_left.rows, image_left.cols,
-            image_left.type());
-
-    std::vector<double> distances;
-    distances.push_back(0.3);
-    distances.push_back(0.4);
-    distances.push_back(0.5);
-    distances.push_back(0.6);
-    distances.push_back(0.7);
-    distances.push_back(0.8);
-    distances.push_back(0.9);
-    distances.push_back(1.0);
-    distances.push_back(1.2);
-    distances.push_back(1.4);
-    distances.push_back(1.6);
-    distances.push_back(1.8);
-    distances.push_back(2.0);
-    distances.push_back(2.5);
-    distances.push_back(3.0);
-    distances.push_back(3.5);
-    distances.push_back(4.0);
-    distances.push_back(4.5);
-    distances.push_back(5.0);
-
-    for (size_t k = 0; k < distances.size(); ++k)
+    for (int k = 50; k <= 100; k+=10)
     {
-        double shift = 10.0 / distances[k];
-        cv::Mat transform = cv::Mat::eye(2, 3, CV_32F);
-        transform.at<float>(0, 2) = -shift;
-        cv::warpAffine(image_left, image_right, transform, image_left.size());
+        std::cout << "*** test for approx. " << k << "cm distance ***" << std::endl;
+        // load image
+        std::ostringstream filename;
+        filename << path << "/data/left_" << k << "cm.jpg";
+        cv::Mat image_left = cv::imread(filename.str());
+        ASSERT_FALSE(image_left.empty());
+        filename.str("");
+        filename << path << "/data/right_" << k << "cm.jpg";
+        cv::Mat image_right = cv::imread(filename.str());
+        ASSERT_FALSE(image_right.empty());
 
         FeatureExtractor::Ptr feature_extractor = 
             FeatureExtractorFactory::create("SURF");
 
         // read calibration data to fill stereo camera model
-        std::string left_file = path + "/data/artificial_calibration_left.yaml";
-        std::string right_file = path + "/data/artificial_calibration_right.yaml";
+        std::string left_file = path + "/data/real_calibration_left.yaml";
+        std::string right_file = path + "/data/real_calibration_right.yaml";
 
         StereoCameraModel::Ptr stereo_camera_model = 
             StereoCameraModel::Ptr(new StereoCameraModel());
@@ -62,33 +49,103 @@ TEST(StereoFeatureExtractor, runTest)
 
         StereoFeatureExtractor extractor;
         extractor.setFeatureExtractor(feature_extractor);
-        extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_BLOCK);
+        extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
         extractor.setCameraModel(stereo_camera_model);
 
         double max_y_diff = 0.5;
         double max_angle_diff = 2.0;
         int max_size_diff = 0;
+        double min_depth = 0.10;
+        double max_depth = 10.0;
         std::vector<StereoFeature> stereo_features = 
             extractor.extract(image_left, image_right,
-                    max_y_diff, max_angle_diff, max_size_diff);
+                    max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
         std::cout << "Found " << stereo_features.size() << " stereo features." << std::endl;
 
         ASSERT_TRUE(stereo_features.size() > 0);
 
-        // the artificial calibration has a baseline length of 10, so
-        // a disparity of 10 means 1m distance
-        double expected_distance = 10.0 / shift;
-        double error = 0.0;
-        for (size_t i = 0; i < stereo_features.size(); ++i)
+        pcl::PointCloud<pcl::PointXYZ> cloud;
+
+        // Fill in the cloud data
+        cloud.width  = stereo_features.size();
+        cloud.height = 1;
+
+        // we cut off everything that is inside a border of 100px because
+        // the test images plane was not big enough
+        for (size_t i = 0; i < stereo_features.size (); ++i)
         {
-            double diff = stereo_features[i].world_point.z - expected_distance;
-            error += std::abs(diff); 
+            if (stereo_features[i].key_point_left.pt.x > 100 &&
+                stereo_features[i].key_point_left.pt.x < image_left.cols - 100 &&
+                stereo_features[i].key_point_left.pt.y > 100 &&
+                stereo_features[i].key_point_left.pt.y < image_left.rows - 100)
+            {
+                pcl::PointXYZ point;
+                point.x = stereo_features[i].world_point.x;
+                point.y = stereo_features[i].world_point.y;
+                point.z = stereo_features[i].world_point.z;
+                cloud.push_back(point);
+            }
         }
-        error /= stereo_features.size();
-        std::cout << "mean error for distance " << expected_distance << ": " << error << std::endl;
+        pcl::ModelCoefficients coefficients;
+        pcl::PointIndices inliers;
+        // Create the segmentation object
+        pcl::SACSegmentation<pcl::PointXYZ> seg;
+        // Optional
+        seg.setOptimizeCoefficients (true);
+        // Mandatory
+        seg.setModelType(pcl::SACMODEL_PLANE);
+        seg.setMethodType(pcl::SAC_RANSAC);
+        seg.setDistanceThreshold(0.05);
+        seg.setInputCloud(cloud.makeShared());
+        seg.segment(inliers, coefficients);
+
+        // there must be some inliers
+        ASSERT_FALSE(inliers.indices.size() == 0);
+
+        std::cout << "plane model inliers: " << inliers.indices.size () << std::endl;
+        double a = coefficients.values[0];
+        double b = coefficients.values[1];
+        double c = coefficients.values[2];
+        double d = coefficients.values[3];
+
+        std::cout << "fitted plane coefficients: " << a << " " << b << " " 
+            << c << " " << d << std::endl;
+
+        // check if the computed plane has the right distance and normal vector
+        EXPECT_NEAR(-d, k/100.0, 0.05);
+        EXPECT_NEAR(a, 0.0, 0.1);
+        EXPECT_NEAR(b, 0.0, 0.1);
+        EXPECT_NEAR(std::abs(c), 1.0, 0.1);
+
+        std::vector<double> distances(inliers.indices.size());
+        for (size_t i = 0; i < inliers.indices.size(); ++i)
+        {
+            const pcl::PointXYZ& point = cloud.points[inliers.indices[i]];
+            distances[i] = std::abs(a * point.x + b * point.y + c * point.z + d);
+        }
+
+        // http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+        double m2 = 0; // helper for floating variance computation
+        double mean_distance = 0;
+        double min_distance = numeric_limits<double>::max();
+        double max_distance = 0;
+        for (size_t i = 0; i < distances.size(); ++i)
+        {
+            if (distances[i] > max_distance) max_distance = distances[i];
+            if (distances[i] < min_distance) min_distance = distances[i];
+            double delta = distances[i] - mean_distance;
+            mean_distance += delta / (i + 1);
+            m2 += delta * (distances[i] - mean_distance);
+        }
+        double variance = m2 / (distances.size() - 1);
+        double stddev = sqrt(variance);
+        std::cout << "distances from fitted plane: mean = " << mean_distance
+            << " stddev = " << stddev << " min = " << min_distance 
+            << " max = " << max_distance << std::endl;
+        EXPECT_LT(mean_distance, 0.01); // we expect a smaller error than 1cm
+        EXPECT_LT(stddev, 0.005);        // with a std deviation of 0.05cm
     }
 }
-
 // Run all the tests that were declared with TEST()
 int main(int argc, char **argv){
     testing::InitGoogleTest(&argc, argv);

@@ -66,6 +66,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("max_y_diff", max_y_diff_, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
         private_nh.param("max_size_diff", max_size_diff_, 2);
+        private_nh.param("min_depth", min_depth_, 0.2);
+        private_nh.param("max_depth", max_depth_, 5.0);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -189,7 +191,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             // Calculate stereo features
             std::vector<StereoFeature> stereo_features = 
                 stereo_feature_extractor_.extract(left_image, right_image, 
-                        max_y_diff_, max_angle_diff_, max_size_diff_);
+                        max_y_diff_, max_angle_diff_, max_size_diff_,
+                        min_depth_, max_depth_);
 
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
@@ -335,6 +338,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     double max_y_diff_;
     double max_angle_diff_;
     int max_size_diff_;
+    // values that adjust the allowed disparity based on calibration
+    double min_depth_; // in meters
+    double max_depth_; // in meters
  
 };
 

@@ -59,6 +59,15 @@ class StereoCameraModel
     */
     typedef boost::shared_ptr<StereoCameraModel> Ptr;
 
+
+    /**
+    * \return the disparity for a point observerd at depth z
+    */
+    inline double getDisparity(double z) const
+    {
+        return model_.getDisparity(z);
+    }
+
   protected:
 
     image_geometry::StereoCameraModel model_;

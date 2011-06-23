@@ -4,13 +4,13 @@
 
 using namespace stereo_feature_extraction;
 
-static const int OCTAVES = 4;
+static const int OCTAVES = 5;
 static const int INIT_STEP = 2;
 static const int THRESHOLD_RESPONSE = 26;
-static const int MAX_POINTS = 200;
+static const int MAX_NUM_POINTS = 200;
 
 SurfExtractor::SurfExtractor() :
-    surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE, MAX_POINTS)
+    surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE)
 {
 }
 
@@ -31,7 +31,14 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     }
 
     std::vector<cv::KeyPoint> cv_key_points;
-    surf_(gray_image, mask, cv_key_points, descriptors);
+    
+    surf_.init(gray_image);
+    surf_.detect(cv_key_points);
+    if (cv_key_points.size() > MAX_NUM_POINTS)
+    {
+        cv_key_points.resize(MAX_NUM_POINTS);
+    }
+    surf_.compute(cv_key_points, descriptors);
 
     key_points.resize(cv_key_points.size());
     for (size_t i = 0; i < cv_key_points.size(); ++i)

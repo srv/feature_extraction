@@ -29,7 +29,7 @@
 //#define ODOMETRY
 #define OpenSURF_COMPATIBLE
 //#define NEW_DESCRIPTOR
-//#define SURF_MARKER
+//#define PYRAMIDE // to build response layers as pyramide
 
 #ifdef OpenSURFcpp // defined in Surf.h
 #include "OpenSURF.h"
@@ -37,9 +37,7 @@
 
 namespace odometry {
 
-#ifdef ODOMETRY
 class KeyPoint;
-#endif
 
 //-------------------------------------------------------
 
@@ -51,35 +49,23 @@ public:
   static const int INTERVALS = 4;
   static const int INIT_STEP = 2;
   static const float THRESHOLD_RESPONSE = 26; // 0.0004f for float integral
-  static const int MAX_POINTS = 200;
-  static const int BOX_X = 0;
-  static const int BOX_Y = 0;
   static const float DESCRIPTOR_SCALE_FACTOR = 1;
 
   Surf( const cv::Mat & source,
         int octaves = OCTAVES,
         int init_step = INIT_STEP,
-        float thres = THRESHOLD_RESPONSE,
-        int max_points = MAX_POINTS,
-        int boxX = BOX_X,
-        int boxY = BOX_Y );
+        float thres = THRESHOLD_RESPONSE );
 
   Surf( int octaves = OCTAVES,
         int init_step = INIT_STEP,
-        float thres = THRESHOLD_RESPONSE,
-        int max_points = MAX_POINTS,
-        int boxX = BOX_X,
-        int boxY = BOX_Y );
+        float thres = THRESHOLD_RESPONSE );
 
   //! Destructor
   ~Surf();
 
   void init( int octaves = OCTAVES,
              int init_step = INIT_STEP,
-             float thres = THRESHOLD_RESPONSE,
-             int max_points = MAX_POINTS,
-             int boxX = BOX_X,
-             int boxY = BOX_Y );
+             float thres = THRESHOLD_RESPONSE );
 
   void init( const cv::Mat & source );
   void init( const cv::Mat & source,
@@ -87,7 +73,8 @@ public:
 
   int size() { return surfPoints.size(); }
 
-  void detect();
+  void detect( odometry::KeyPoint * & points,
+               int & length );
 
   void detect( std::vector<cv::KeyPoint> & keys, 
                bool upright = false );
@@ -96,12 +83,11 @@ public:
                std::vector<cv::KeyPoint> & keys,
                const cv::Mat & mask = cv::Mat(), 
                bool upright = false );
+ 
 
-
-#ifdef ODOMETRY
-  void compute( KeyPoint * points,
+  void compute( odometry::KeyPoint * points,
+                int length,
                 bool upright = false );
-#endif
   
   void compute( std::vector<cv::KeyPoint> & keys,
                cv::Mat & descriptors );
@@ -128,12 +114,14 @@ private:
            int step,
            int filter,
            int m )
+#ifdef PYRAMIDE
     : width( width / m ), height( height / m ), step( step * m ),
-//    : width( width ), height( height ), step( step ),
-//    : width( width * 2 ), height( height * 2 ), step( 1 ),
+#else
+    : width( width ), height( height ), step( step ),
+    //    : width( width * 2 ), height( height * 2 ), step( 1 ),
+#endif
       filter( 3 * ( filter * m + 1 ) ) {
 //        std::cout << " filter size " << 0.133f * this->filter << std::endl;
-      assert( width > 0 and height > 0 );
 
       responses = new float[this->width * this->height];
       memset( responses, 0, sizeof( float ) * this->width * this->height );
@@ -143,8 +131,8 @@ private:
     }
 
     ~Layer() {
-      if ( responses ) delete [] responses;
-      if ( laplacian ) delete [] laplacian;
+      delete[] responses;
+      delete[] laplacian;
     }
 
     int width, height, step, filter;
@@ -159,21 +147,13 @@ private:
               float laplacian,
               int x,
               int y,
-              int box,
-              unsigned char b,
-              unsigned char m,
-              unsigned char t ) :
+              short octave,
+              short interval ) :
       response( response ), laplacian( laplacian ), x( x ), y( y ),
-      box( box ), b( b ), m( m ), t( t )
-    {; }
-    bool operator<( const Extremum & other ) const {
-      return response > other.response;
-    }
-    float response;
-    float laplacian;
+      octave( octave ), interval( interval )  {; }
+    float response, laplacian;
     int x, y;
-    int box;
-    unsigned char b, m, t;
+    int octave, interval;
   };
 
   struct SurfPoint {
@@ -181,6 +161,7 @@ private:
     //! Orientation measured anti-clockwise from +ve x-axis
     float response;
     float laplacian;
+    unsigned char octave;
   };
 
   struct Angle {
@@ -197,10 +178,11 @@ private:
 
   void getExtrema();
   void interpolate( Extremum & );
-  void takeBest();
 
   //! Assign the current Ipoint an orientation
-  template<class T> float getOrientation( SurfPoint & surfPoint );
+  template<class T> float getOrientation( float keyPointX,
+                                          float keyPointY,
+                                          float keyPointScale );
 
   //! Get the descriptor. See Agrawal ECCV 08
   template<class T> void getDescriptor( float keyPointX,
@@ -214,17 +196,6 @@ private:
                                                float keyPointScale,
                                                float * descriptor );
 
-  //! Get the angle from the +ve x-axis of the vector given by (X Y)
-  inline float getAngle( float x,
-                         float y ) {
-// first option for interval [0, 2*pi), second for interval (-pi, pi]
-//    return ( x ? atan( y / x ) : ( y >= 0 ? 3.14159f / 2 : -3.14159f / 2 ) )
-//           + ( x >= 0 ? ( y >= 0 ? 0 : 2 * 3.14159f ) : 3.14159f );
-//    return ( x ? atan( y / x ) : ( y >= 0 ? 3.14159f / 2 : -3.14159f / 2 ) )
-//           + ( x >= 0 ? 0 : ( y >= 0 ? 3.14159 : -3.14159f ) );
-    return atan2( y, x );
-  }
-
   inline int fastFloor( const float x ) {
 //#ifdef  OpenSURF_COMPATIBLE
     return x >= 0 ? (int)x : ( (int)x == x ? (int)x : ( (int)x ) - 1 );
@@ -233,6 +204,8 @@ private:
 //#endif
   }
 
+  void detect();
+  
   bool isInt() { return ( imgRows * imgCols ) <= ( 1 << 23 ); }
 
   inline int fastMin( int a,
@@ -240,23 +213,16 @@ private:
   inline int fastMax( int a,
                       int b ) { return ( a > b ) ? a : b; }
 
-  //---------------- Private Variables -----------------//
-
-  //! Pointer to the integral Image, and its attributes
   void * integral;
   int imgRows, imgCols;
 
-
-  //! Reference to vector of features passed from outside
   std::vector<SurfPoint> surfPoints;
   std::vector<Extremum> extrema;
 
-  //! Response stack of determinant of hessian values
   Layer * * pyramide;
   int pyramideSize;
 
   int octaves;
-//  int intervals;
   int initStep;
   int maxPoints;
   float thresholdResponse;
