@@ -205,6 +205,54 @@ TEST(StereoFeatureExtractor, depthResolutionTest)
         EXPECT_LT(stddev, 0.005);        // with a std deviation of 0.05cm
     }
 }
+
+TEST(StereoFeatureExtractor, roiSpeedTest)
+{
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+    path += "/data/";
+
+    // load image
+    cv::Mat image_left = cv::imread(path + "left_100cm.jpg");
+    ASSERT_FALSE(image_left.empty());
+    cv::Mat image_right = cv::imread(path + "right_100cm.jpg");
+    ASSERT_FALSE(image_right.empty());
+
+    FeatureExtractor::Ptr feature_extractor = 
+        FeatureExtractorFactory::create("SURF");
+
+    // read calibration data to fill stereo camera model
+    std::string left_file = path + "real_calibration_left.yaml";
+    std::string right_file = path + "real_calibration_right.yaml";
+
+    StereoCameraModel::Ptr stereo_camera_model = 
+        StereoCameraModel::Ptr(new StereoCameraModel());
+    stereo_camera_model->fromCalibrationFiles(left_file, right_file);
+
+    StereoFeatureExtractor extractor;
+    extractor.setFeatureExtractor(feature_extractor);
+    extractor.setCameraModel(stereo_camera_model);
+
+    double time = (double)cv::getTickCount();
+    std::vector<StereoFeature> stereo_features = 
+        extractor.extract(image_left, image_right);
+    time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
+    std::cout << "Image " << image_left.cols << "x" << image_left.rows 
+        << " found " << stereo_features.size() << " stereo features" 
+        << " in " << time << "ms." << std::endl;
+
+    for (int w = 100; w < 800; w += 100)
+    {
+        cv::Rect roi(0, 0, w, w);
+        extractor.setRegionOfInterest(roi);
+        double time = (double)cv::getTickCount();
+        stereo_features = extractor.extract(image_left, image_right);
+        time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
+        std::cout << "Image " << w << "x" << w 
+            << " found " << stereo_features.size() << " stereo features" 
+            << " in " << time << "ms." << std::endl;
+    }
+}
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char **argv){
     testing::InitGoogleTest(&argc, argv);
