@@ -27,7 +27,7 @@ TEST(Extractor, runTest)
         std::vector<KeyPoint> key_points;
         cv::Mat descriptors;
         double time = (double)cv::getTickCount();
-        extractor->extract(image, mask, key_points, descriptors);
+        extractor->extract(image, key_points, descriptors);
         time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
 
         ASSERT_GT(key_points.size(), 0);
@@ -58,7 +58,7 @@ TEST(Extractor, maxNumPointsTest)
             std::vector<KeyPoint> key_points;
             cv::Mat descriptors;
             extractor->setMaxNumKeyPoints(p);
-            extractor->extract(image, mask, key_points, descriptors);
+            extractor->extract(image, key_points, descriptors);
             EXPECT_LE((int)key_points.size(), p);
             std::cout << "extracted " << key_points.size() 
                 << " key points (max was set to " << p << ")" << std::endl;

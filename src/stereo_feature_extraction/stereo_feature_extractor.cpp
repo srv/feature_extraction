@@ -6,8 +6,22 @@
 
 using namespace stereo_feature_extraction;
 
+
+static const double DEFAULT_MAX_Y_DIFF = 0.5;
+static const double DEFAULT_MAX_ANGLE_DIFF = 5.0;
+static const int DEFAULT_MAX_SIZE_DIFF = 0;
+static const double DEFAULT_MIN_DEPTH = 0.1;
+static const double DEFAULT_MAX_DEPTH = 10.0;
+static const StereoFeatureExtractor::MatchMethod DEFAULT_MATCH_METHOD = 
+  StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT;
+
 StereoFeatureExtractor::StereoFeatureExtractor() :
-    match_method_(KEY_POINT_TO_KEY_POINT)
+    match_method_(DEFAULT_MATCH_METHOD),
+    max_y_diff_(DEFAULT_MAX_Y_DIFF),
+    max_angle_diff_(DEFAULT_MAX_ANGLE_DIFF),
+    max_size_diff_(DEFAULT_MAX_SIZE_DIFF),
+    min_depth_(DEFAULT_MIN_DEPTH),
+    max_depth_(DEFAULT_MAX_DEPTH)
 {
 }
 
@@ -28,18 +42,54 @@ void StereoFeatureExtractor::setMatchMethod(const MatchMethod& match_method)
     match_method_ = match_method;
 }
 
+void StereoFeatureExtractor::setMaxYDiff(double max_y_diff)
+{
+    max_y_diff_ = max_y_diff;
+}
+
+void StereoFeatureExtractor::setMaxAngleDiff(double max_angle_diff)
+{
+    max_angle_diff_ = max_angle_diff;
+}
+
+void StereoFeatureExtractor::setMaxSizeDiff(int max_size_diff)
+{
+    max_size_diff_ = max_size_diff;
+}
+
+void StereoFeatureExtractor::setMinDepth(double min_depth)
+{
+    min_depth_ = min_depth;
+}
+
+void StereoFeatureExtractor::setMaxDepth(double max_depth)
+{
+    max_depth_ = max_depth;
+}
+
+void StereoFeatureExtractor::setRegionOfInterest(const cv::Rect& roi)
+{
+    assert(roi.x >= 0 && roi.y >= 0 && roi.width >= 0 && roi.height >= 0);
+    region_of_interest_ = roi;
+}
+
 
 std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
         const cv::Mat& image_left, const cv::Mat& image_right, 
-        double max_y_diff, double max_distance) const
+        double max_distance) const
 {
     assert(feature_extractor_.get() != NULL);
     assert(stereo_camera_model_.get() != NULL);
 
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
-    feature_extractor_->extract(image_left, cv::Mat(), key_points_left, 
-            descriptors_left);
+    cv::Rect roi_left = region_of_interest_;
+    if (roi_left.x + roi_left.width > image_left.cols) 
+        roi_left.width = image_left.cols - roi_left.x;
+    if (roi_left.y + roi_left.height > image_left.rows)
+        roi_left.height = image_left.rows - roi_left.y;
+    feature_extractor_->extract(image_left, key_points_left,
+            descriptors_left, roi_left);
 
     std::vector<StereoFeature> stereo_features;
     for (size_t i = 0; i < key_points_left.size(); ++i)
@@ -47,7 +97,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
         const KeyPoint& key_point_left = key_points_left[i];
         double distance;
         cv::Point2f point_right = findCorrespondenceBM(image_left, 
-                key_point_left.pt, image_right, max_y_diff, &distance);
+                key_point_left.pt, image_right, &distance);
         if (distance < max_distance)
         {
             StereoFeature stereo_feature;
@@ -68,7 +118,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
 
 cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_left,
         const cv::Point2f& point_left, const cv::Mat& image_right, 
-        double max_y_dist, double* distance)
+        double* distance) const
 {
     int template_size = 15;
     int half_template_size = template_size / 2 + 1;
@@ -82,8 +132,8 @@ cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_le
         cv::Rect template_roi(template_x, template_y, template_size, template_size);
         cv::Mat match_template = cv::Mat(image_left, template_roi);
         
-        cv::Rect search_roi(0, point_left.y - max_y_dist - half_template_size, image_right.cols,
-                2.0 * max_y_dist + template_size);
+        cv::Rect search_roi(0, point_left.y - max_y_diff_ - half_template_size, image_right.cols,
+                2.0 * max_y_diff_ + template_size);
         cv::Mat search_image(image_right, search_roi);
 
         cv::Mat result_image;
@@ -112,46 +162,62 @@ cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_le
 }
 
 std::vector<StereoFeature> StereoFeatureExtractor::extract(
-        const cv::Mat& image_left, const cv::Mat& image_right, 
-        double max_y_diff, double max_angle_diff, 
-        int max_size_diff, double min_depth, double max_depth) const
+        const cv::Mat& image_left, const cv::Mat& image_right) const
 {
     if (match_method_ == KEY_POINT_TO_KEY_POINT)
     {
-        return extractKeyPointToKeyPoint(image_left, image_right,
-                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+        return extractKeyPointToKeyPoint(image_left, image_right);
     }
     else
     {
-        return extractKeyPointToBlock(image_left, image_right,
-                max_y_diff, 100);
+        return extractKeyPointToBlock(image_left, image_right, 100);
     }
 }
 
 std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
-        const cv::Mat& image_left, const cv::Mat& image_right, 
-        double max_y_diff, double max_angle_diff, 
-        int max_size_diff, double min_depth, double max_depth) const
+        const cv::Mat& image_left, const cv::Mat& image_right) const
 {
     assert(feature_extractor_.get() != NULL);
     assert(stereo_camera_model_.get() != NULL);
 
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
-    feature_extractor_->extract(image_left, cv::Mat(), key_points_left, 
-            descriptors_left);
+
+    cv::Rect roi_left = region_of_interest_;
+    if (roi_left.x + roi_left.width > image_left.cols) 
+        roi_left.width = image_left.cols - roi_left.x;
+    if (roi_left.y + roi_left.height > image_left.rows)
+        roi_left.height = image_left.rows - roi_left.y;
+    
+    std::cout << "roi left: " << roi_left.tl() << " " << roi_left.br() << std::endl;
+ 
+    feature_extractor_->extract(image_left, key_points_left, 
+            descriptors_left, roi_left);
+
+    double min_disparity = stereo_camera_model_->getDisparity(max_depth_);
+    double max_disparity = stereo_camera_model_->getDisparity(min_depth_);
 
     std::vector<KeyPoint> key_points_right;
     cv::Mat descriptors_right;
-    feature_extractor_->extract(image_right, cv::Mat(), key_points_right,
-            descriptors_right);
 
-    double min_disparity = stereo_camera_model_->getDisparity(max_depth);
-    double max_disparity = stereo_camera_model_->getDisparity(min_depth);
+    // compute roi for right image
+    cv::Rect roi_right = roi_left;
+    if (roi_left.width != 0 && roi_left.height != 0)
+    {
+        roi_right.x -= max_disparity;
+        if (roi_right.x < 0) roi_right.x = 0;
+        roi_right.width += max_disparity - min_disparity;
+        if (roi_right.width > image_right.cols) roi_right.width = image_right.cols;
+    }
+    std::cout << "roi right: " << roi_right.tl() << " " << roi_right.br() << std::endl;
+
+    feature_extractor_->extract(image_right, key_points_right,
+            descriptors_right, roi_right);
+
 
     cv::Mat match_mask;
-    computeMatchMask(key_points_left, key_points_right, match_mask, max_y_diff,
-            max_angle_diff, max_size_diff, min_disparity, max_disparity);
+    computeMatchMask(key_points_left, key_points_right, match_mask, max_y_diff_,
+            max_angle_diff_, max_size_diff_, min_disparity, max_disparity);
 
     std::vector<cv::DMatch> matches;
     //crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);

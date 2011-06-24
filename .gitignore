@@ -14,6 +14,8 @@ msg/lisp/
 srv_gen/
 src/*/srv/_*.py
 src/*/_*_.py
+src/*/_*_.pyc
+src/*/srv
 
 # Makefiles
 Makefile

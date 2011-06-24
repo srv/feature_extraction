@@ -37,14 +37,13 @@ class FeatureExtractor
     /**
     * Extraction interface.
     * \param image the input image.
-    * \param mask mask out keypoints where mask.at<uchar>(i, j) == 0
     * \param key_points output vector for computed key points
     * \param descriptors output matrix for descriptors 
+    * \param roi region of interest where the features have to be extracted
     */
     virtual void extract(const cv::Mat& image, 
-            const cv::Mat& mask,
             std::vector<KeyPoint>& key_points,
-            cv::Mat& descriptors) = 0;
+            cv::Mat& descriptors, const cv::Rect& roi = cv::Rect()) = 0;
 
     /**
     * set the maximum number of key points to extract

@@ -23,7 +23,7 @@
 #include "feature_extractor_factory.h"
 #include "drawing.h"
 
-#include "stereo_feature_extraction/ExtractFeatures.h" // generated srv header
+#include "stereo_feature_extraction/SetRegionOfInterest.h" // generated srv header
 
 namespace stereo_feature_extraction
 {
@@ -63,11 +63,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         bool approx;
         private_nh.param("approximate_sync", approx, false);
 
-        private_nh.param("max_y_diff", max_y_diff_, 2.0);
-        private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
-        private_nh.param("max_size_diff", max_size_diff_, 2);
-        private_nh.param("min_depth", min_depth_, 0.2);
-        private_nh.param("max_depth", max_depth_, 5.0);
+        double max_y_diff, max_angle_diff, min_depth, max_depth;
+        int max_size_diff;
+        private_nh.param("max_y_diff", max_y_diff, 2.0);
+        private_nh.param("max_angle_diff", max_angle_diff, 2.0);
+        private_nh.param("max_size_diff", max_size_diff, 2);
+        private_nh.param("min_depth", min_depth, 0.2);
+        private_nh.param("max_depth", max_depth, 5.0);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -85,9 +87,16 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
         stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
 
-        NODELET_INFO_STREAM("Parameters: max_y_diff = " << max_y_diff_
-                  << " max_angle_diff = " << max_angle_diff_
-                  << " max_size_diff = " << max_size_diff_
+        stereo_feature_extractor_.setMaxYDiff(max_y_diff);
+        stereo_feature_extractor_.setMaxAngleDiff(max_angle_diff);
+        stereo_feature_extractor_.setMaxSizeDiff(max_size_diff);
+        stereo_feature_extractor_.setMinDepth(min_depth);
+        stereo_feature_extractor_.setMaxDepth(max_depth);
+
+        NODELET_INFO_STREAM("Parameters: max_y_diff = " << max_y_diff
+                  << " max_angle_diff = " << max_angle_diff
+                  << " max_size_diff = " << max_size_diff
+                  << " depth min/max = " << min_depth << "/" << max_depth
                   << " feature_extractor = " << feature_extractor_name);
         if (approx)
         {
@@ -110,8 +119,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
 
         // advertise the service
-        service_server_ = nh.advertiseService("extract_features", 
-                &StereoFeatureExtractorNodelet::extractFeaturesSrvCb, this);
+        service_server_ = nh.advertiseService("set_region_of_interest", 
+                &StereoFeatureExtractorNodelet::setRegionOfInterestSrvCb, this);
 
 
         NODELET_INFO("Waiting for client subscriptions.");
@@ -149,6 +158,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                  const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                  const sensor_msgs::CameraInfoConstPtr& r_info_msg)
     {
+        if (region_of_interest_.area() == 0)
+        {
+            // invalid roi, set to image size
+            region_of_interest_ = 
+                cv::Rect(0, 0, l_image_msg->width, l_image_msg->height);
+        }
+           
         vision_msgs::StereoFeaturesPtr features_msg =
             extractFeatures(*l_image_msg, *r_image_msg,
                             *l_info_msg, *r_info_msg);
@@ -185,14 +201,12 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             // Update the camera model
             stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
 
-            const cv::Mat& left_image = cv_ptr_left->image;
-            const cv::Mat& right_image = cv_ptr_right->image;
+            cv::Mat left_image = cv_ptr_left->image;
+            cv::Mat right_image = cv_ptr_right->image;
 
             // Calculate stereo features
             std::vector<StereoFeature> stereo_features = 
-                stereo_feature_extractor_.extract(left_image, right_image, 
-                        max_y_diff_, max_angle_diff_, max_size_diff_,
-                        min_depth_, max_depth_);
+                stereo_feature_extractor_.extract(left_image, right_image);
 
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
@@ -262,6 +276,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 cv::Mat canvas;
                 drawStereoFeatures(canvas, cv_ptr_left->image, 
                                     cv_ptr_right->image, stereo_features);
+                cv::rectangle(canvas, region_of_interest_.tl(),
+                        region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
                 cv_bridge::CvImage cv_image;
                 cv_image.header = cv_ptr_left->header;
                 cv_image.encoding = cv_ptr_left->encoding;
@@ -282,21 +298,33 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     /**
     * implementation of the service
     */
-    bool extractFeaturesSrvCb(ExtractFeatures::Request& request,
-                         ExtractFeatures::Response& response)
+    bool setRegionOfInterestSrvCb(SetRegionOfInterest::Request& request,
+                         SetRegionOfInterest::Response& response)
     {
-         vision_msgs::StereoFeaturesPtr features = extractFeatures(
-            request.left_image, request.right_image,
-            request.left_camera_info, request.right_camera_info);
-         if (features.get() == NULL)
-         {
-             return false;
-         }
-         else
-         {
-            response.features = *features;
+        if (request.x >= 0 && request.y >= 0)
+        {
+            region_of_interest_.x = request.x;
+            region_of_interest_.y = request.y;
+            region_of_interest_.width = request.width;
+            region_of_interest_.height = request.height;
+            ROS_INFO("Region of interest set to: (%i, %i), %ix%i due to service call",
+                    region_of_interest_.x,
+                    region_of_interest_.y,
+                    region_of_interest_.width,
+                    region_of_interest_.height);
+            stereo_feature_extractor_.setRegionOfInterest(region_of_interest_);
             return true;
-         }
+        }
+        else
+        {
+            ROS_WARN("Invalid region of interest given (%i, %i, %ix%i), "
+                     "leaving ROI untouched.",
+                request.x,
+                request.y,
+                request.width,
+                request.height);
+            return false;
+        }
     }
 
     boost::shared_ptr<image_transport::ImageTransport> it_;
@@ -334,13 +362,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // the srv
     ros::ServiceServer service_server_;
 
-    // matching parameters
-    double max_y_diff_;
-    double max_angle_diff_;
-    int max_size_diff_;
-    // values that adjust the allowed disparity based on calibration
-    double min_depth_; // in meters
-    double max_depth_; // in meters
+    // the current roi
+    cv::Rect region_of_interest_;
  
 };
 

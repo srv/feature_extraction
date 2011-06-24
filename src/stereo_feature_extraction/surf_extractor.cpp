@@ -18,9 +18,9 @@ SurfExtractor::SurfExtractor() : FeatureExtractor(),
 {
 }
 
-void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
+void SurfExtractor::extract(const cv::Mat& image,
         std::vector<KeyPoint>& key_points,
-        cv::Mat& descriptors)
+        cv::Mat& descriptors, const cv::Rect& roi)
 {
     assert(image.type() == CV_8UC3 || image.type() == CV_8U);
 
@@ -35,9 +35,22 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     }
 
     std::vector<cv::KeyPoint> cv_key_points;
-    
-    surf_.init(gray_image);
+
+    cv::Mat image_region;
+    // apply roi
+    if (roi.width != 0 && roi.height != 0)
+    {
+        // we have to copy becaus Surf needs continuous images
+        cv::Mat(gray_image, roi).copyTo(image_region);
+    }
+    else
+    {
+        image_region = gray_image;
+    }
+
+    surf_.init(image_region);
     surf_.detect(cv_key_points);
+
     if (cv_key_points.size() > (unsigned int)max_num_key_points_)
     {
         std::partial_sort(cv_key_points.begin(), 
@@ -51,6 +64,8 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     for (size_t i = 0; i < cv_key_points.size(); ++i)
     {
         key_points[i] = KeyPoint(cv_key_points[i]);
+        key_points[i].pt.x += roi.x; // adjust position due to roi
+        key_points[i].pt.y += roi.y; // adjust position due to roi
     }
 }
 
