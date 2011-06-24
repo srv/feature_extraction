@@ -189,7 +189,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
     if (roi_left.y + roi_left.height > image_left.rows)
         roi_left.height = image_left.rows - roi_left.y;
     
-    std::cout << "roi left: " << roi_left.tl() << " " << roi_left.br() << std::endl;
+    // std::cout << "roi left: " << roi_left.tl() << " " << roi_left.br() << std::endl;
  
     feature_extractor_->extract(image_left, key_points_left, 
             descriptors_left, roi_left);
@@ -209,7 +209,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
         roi_right.width += max_disparity - min_disparity;
         if (roi_right.width > image_right.cols) roi_right.width = image_right.cols;
     }
-    std::cout << "roi right: " << roi_right.tl() << " " << roi_right.br() << std::endl;
+    // std::cout << "roi right: " << roi_right.tl() << " " << roi_right.br() << std::endl;
 
     feature_extractor_->extract(image_right, key_points_right,
             descriptors_right, roi_right);
