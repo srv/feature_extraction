@@ -63,11 +63,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         bool approx;
         private_nh.param("approximate_sync", approx, false);
 
-        private_nh.param("max_y_diff", max_y_diff_, 2.0);
-        private_nh.param("max_angle_diff", max_angle_diff_, 2.0);
-        private_nh.param("max_size_diff", max_size_diff_, 2);
-        private_nh.param("min_depth", min_depth_, 0.2);
-        private_nh.param("max_depth", max_depth_, 5.0);
+        double max_y_diff, max_angle_diff, min_depth, max_depth;
+        int max_size_diff;
+        private_nh.param("max_y_diff", max_y_diff, 2.0);
+        private_nh.param("max_angle_diff", max_angle_diff, 2.0);
+        private_nh.param("max_size_diff", max_size_diff, 2);
+        private_nh.param("min_depth", min_depth, 0.2);
+        private_nh.param("max_depth", max_depth, 5.0);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -85,9 +87,16 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
         stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
 
-        NODELET_INFO_STREAM("Parameters: max_y_diff = " << max_y_diff_
-                  << " max_angle_diff = " << max_angle_diff_
-                  << " max_size_diff = " << max_size_diff_
+        stereo_feature_extractor_.setMaxYDiff(max_y_diff);
+        stereo_feature_extractor_.setMaxAngleDiff(max_angle_diff);
+        stereo_feature_extractor_.setMaxSizeDiff(max_size_diff);
+        stereo_feature_extractor_.setMinDepth(min_depth);
+        stereo_feature_extractor_.setMaxDepth(max_depth);
+
+        NODELET_INFO_STREAM("Parameters: max_y_diff = " << max_y_diff
+                  << " max_angle_diff = " << max_angle_diff
+                  << " max_size_diff = " << max_size_diff
+                  << " depth min/max = " << min_depth << "/" << max_depth
                   << " feature_extractor = " << feature_extractor_name);
         if (approx)
         {
@@ -192,14 +201,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             // Update the camera model
             stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
 
-            const cv::Mat& left_image = cv_ptr_left->image;
-            const cv::Mat& right_image = cv_ptr_right->image;
+            // apply roi
+            cv::Mat left_image = cv::Mat(cv_ptr_left->image, region_of_interest_);
+            cv::Mat right_image = cv::Mat(cv_ptr_right->image, region_of_interest_);
 
             // Calculate stereo features
             std::vector<StereoFeature> stereo_features = 
-                stereo_feature_extractor_.extract(left_image, right_image, 
-                        max_y_diff_, max_angle_diff_, max_size_diff_,
-                        min_depth_, max_depth_);
+                stereo_feature_extractor_.extract(left_image, right_image);
 
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
@@ -340,14 +348,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
     // the srv
     ros::ServiceServer service_server_;
-
-    // matching parameters
-    double max_y_diff_;
-    double max_angle_diff_;
-    int max_size_diff_;
-    // values that adjust the allowed disparity based on calibration
-    double min_depth_; // in meters
-    double max_depth_; // in meters
 
     // the current roi
     cv::Rect region_of_interest_;

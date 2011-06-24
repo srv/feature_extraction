@@ -13,7 +13,10 @@ namespace stereo_feature_extraction
 
 /**
 * \class StereoFeatureExtractor
-* \brief Extractor for matching keypoints in a rectified stereo image pair
+* \brief Extractor for matching key points in a rectified stereo image pair
+* Due to epipolar constraints the matching of key points from left to
+* right image can be limited. Therefore StereoFeatureExtractor has
+* some variables to control these constraints. See cpp file for default values.
 */
 class StereoFeatureExtractor
 {
@@ -38,14 +41,52 @@ class StereoFeatureExtractor
     void setFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor);
 
     /**
+    * \param model new camera model
+    */
+    void setCameraModel(const StereoCameraModel::Ptr& model);
+
+    /**
     * \param match_method match method to use
     */
     void setMatchMethod(const MatchMethod& match_method);
 
     /**
-    * \param model new camera model
+    * \param max_y_diff the maximum difference in y-coordinates that
+    *        matching key points can have. In the ideal case, this value
+    *        is zero, due to camera calibration errors and noise it
+    *        should be set to something around 0.5-2.0
     */
-    void setCameraModel(const StereoCameraModel::Ptr& model);
+    void setMaxYDiff(double max_y_diff);
+
+    /**
+    * \param max_angle_diff the maximum allowed difference of the
+    *        angles (directions) of two matching key points.
+    */
+    void setMaxAngleDiff(double max_angle_diff);
+
+    /**
+    * \param max_size_diff the maximum allowed difference of the
+    *        size parameter of two matching key points.
+    */
+    void setMaxSizeDiff(int max_size_diff);
+
+    /**
+    * \param min_depth the minimum depth of world points to detect
+    *        (search can be limited when this is high)
+    */
+    void setMinDepth(double min_depth);
+
+    /**
+    * \param max_depth the maximum depth of world points to detect
+    *        (search can be limited when this is low)
+    */
+    void setMaxDepth(double max_depth);
+
+    /**
+    * \param roi region of interest where features have to be extracted,
+    *        if width or height are zero, the whole image will be used (no roi)
+    */
+    void setRegionOfInterest(const cv::Rect& roi);
 
     /**
     * Extracts stereo keypoints from given rectified stereo image pair.
@@ -57,20 +98,10 @@ class StereoFeatureExtractor
     *
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-    * \param max_y_diff the maximum difference of the y coordinates of
-    *        left and right keypoints to be accepted as match candidate
-    * \param max_angle_diff the maximum difference of the keypoint orientation
-    *        in degrees
-    * \param max_size_diff the maximum difference of keypoint sizes to accept
-    * \param min_depth the minimum depth (possible distance to an object)
-    *        limits the disparity and therefore the correspondence search range
-    * \param max_depth the maximum depth (possible distance to an object)
     * \return vector of stereo features
     */
     std::vector<StereoFeature> extract(const cv::Mat& image_left, 
-            const cv::Mat& image_right, double max_y_diff, 
-            double max_angle_diff, int max_size_diff,
-            double min_depth, double max_depth) const;
+            const cv::Mat& image_right) const;
 
 
     /**
@@ -137,31 +168,21 @@ class StereoFeatureExtractor
   protected:
 
     /**
-    * Extracts stereo keypoints from given rectified stereo image pair.
+    * Extracts stereo key points from given rectified stereo image pair.
     * Keypoints for each image are computed, a match mask that preserves
-    * the epipolar constraints (given by max* parameters) is computed, 
+    * the epipolar constraints (given by internal parameters) is computed, 
     * descriptors for keypoints are computed and matched.
     * Afterwards, for each match a 3d point is computed based on a
     * stereo camera model.
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-    * \param max_y_diff the maximum difference of the y coordinates of
-    *        left and right keypoints to be accepted as match candidate
-    * \param max_angle_diff the maximum difference of the keypoint orientation
-    *        in degrees
-    * \param max_size_diff the maximum difference of keypoint sizes to accept
-    * \param min_depth the minimum depth (possible distance to an object)
-    *        limits the disparity and therefore the correspondence search range
-    * \param max_depth the maximum depth (possible distance to an object)
      * \return vector of stereo features
     */
-    std::vector<StereoFeature> extractKeyPointToKeyPoint(const cv::Mat& image_left, 
-            const cv::Mat& image_right, double max_y_diff, 
-            double max_angle_diff, int max_size_diff,
-            double min_depth, double max_depth) const;
+    std::vector<StereoFeature> extractKeyPointToKeyPoint(
+            const cv::Mat& image_left, const cv::Mat& image_right) const;
 
     /**
-    * Extracts stereo keypoints from given rectified stereo image pair
+    * Extracts stereo key points from given rectified stereo image pair
     * using a combination of key point detection and block matching.
     * Keypoints for the left image are computed and corresponding points
     * in the right image are found by block matching, preserving the given 
@@ -170,14 +191,11 @@ class StereoFeatureExtractor
     * stereo camera model.
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-    * \param max_y_diff the maximum difference of the y coordinates of
-    *        left and right points to be accepted as match
     * \param max_distance the block matching threshold
     * \return vector of stereo features
     */
     std::vector<StereoFeature> extractKeyPointToBlock(const cv::Mat& image_left, 
-            const cv::Mat& image_right,  double max_y_diff, 
-            double max_distance) const;
+            const cv::Mat& image_right, double max_distance) const;
 
     /**
     * Finds a correspondence using block matching
@@ -185,17 +203,24 @@ class StereoFeatureExtractor
     * \param point_left the left point which neighborhood is used as search 
     *        pattern
     * \param image_right the search image
-    * \param max_y_dist tha maximum distance in y that may have the matching points
     * \param distance the distance of the matching blocks is saved here
     */
-    static cv::Point2f findCorrespondenceBM(const cv::Mat& image_left,
+    cv::Point2f findCorrespondenceBM(const cv::Mat& image_left,
         const cv::Point2f& point_left, const cv::Mat& image_right, 
-        double max_y_dist, double* distance);
+        double* distance) const;
 
     FeatureExtractor::Ptr feature_extractor_;
     StereoCameraModel::Ptr stereo_camera_model_;
 
     MatchMethod match_method_;
+
+    double max_y_diff_;
+    double max_angle_diff_;
+    int max_size_diff_;
+    double min_depth_;
+    double max_depth_;
+
+    cv::Rect region_of_interest_;
 
 };
 

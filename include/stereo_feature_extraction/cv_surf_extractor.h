@@ -21,8 +21,8 @@ class CvSurfExtractor : public FeatureExtractor
     CvSurfExtractor();
 
     // see base class for documentation
-    void extract(const cv::Mat& image, const cv::Mat& mask,
-            std::vector<KeyPoint>&, cv::Mat& descriptors);
+    void extract(const cv::Mat& image, std::vector<KeyPoint>& key_points,
+            cv::Mat& descriptors, const cv::Rect& roi);
 
   private:
 

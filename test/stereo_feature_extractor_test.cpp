@@ -43,30 +43,45 @@ TEST(StereoFeatureExtractor, runTest)
 
     StereoFeatureExtractor extractor;
     extractor.setFeatureExtractor(feature_extractor);
-    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
     extractor.setCameraModel(stereo_camera_model);
 
-    double max_y_diff = 0.5;
-    double max_angle_diff = 2.0;
-    int max_size_diff = 0;
-    double min_depth = 0.10;
-    double max_depth = 10.0;
+    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
     double time = (double)cv::getTickCount();
     std::vector<StereoFeature> stereo_features = 
-        extractor.extract(image_left, image_right,
-                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+        extractor.extract(image_left, image_right);
     time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
     std::cout << "Key point to key point matching: found " << stereo_features.size() << " stereo features" 
         << " in " << time << "ms." << std::endl;
 
     extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_BLOCK);
     time = (double)cv::getTickCount();
-    stereo_features = extractor.extract(image_left, image_right,
-                max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+    stereo_features = extractor.extract(image_left, image_right);
     time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
     std::cout << "Key point to block matching: found " << stereo_features.size() << " stereo features" 
         << " in " << time << "ms." << std::endl;
 
+    // try run on region of interest 
+    int roi_x = image_left.cols / 4;
+    int roi_y = image_left.rows / 4;
+    int roi_width = image_left.cols / 2;
+    int roi_height = image_left.rows / 2;
+    cv::Rect roi(roi_x, roi_y, roi_width, roi_height);
+    extractor.setRegionOfInterest(roi);
+    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
+    extractor.setMinDepth(0.5);
+    extractor.setMaxDepth(1.5);
+    stereo_features = extractor.extract(image_left, image_right);
+    EXPECT_GT(stereo_features.size(), 0);
+
+    // check for right depth and coordinates inside roi
+    for (size_t i = 0; i < stereo_features.size(); ++i)
+    {
+        EXPECT_NEAR(stereo_features[i].world_point.z, 1.0, 0.05); // 5cm tolerance
+        EXPECT_GE(stereo_features[i].key_point_left.pt.x, roi_x);
+        EXPECT_GE(stereo_features[i].key_point_left.pt.y, roi_y);
+        EXPECT_LT(stereo_features[i].key_point_left.pt.x, roi_x + roi_width);
+        EXPECT_LT(stereo_features[i].key_point_left.pt.y, roi_y + roi_height);
+    }
 }
 
 TEST(StereoFeatureExtractor, depthResolutionTest)
@@ -102,14 +117,8 @@ TEST(StereoFeatureExtractor, depthResolutionTest)
         extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
         extractor.setCameraModel(stereo_camera_model);
 
-        double max_y_diff = 0.5;
-        double max_angle_diff = 2.0;
-        int max_size_diff = 0;
-        double min_depth = 0.10;
-        double max_depth = 10.0;
         std::vector<StereoFeature> stereo_features = 
-            extractor.extract(image_left, image_right,
-                    max_y_diff, max_angle_diff, max_size_diff, min_depth, max_depth);
+            extractor.extract(image_left, image_right);
         std::cout << "Found " << stereo_features.size() << " stereo features." << std::endl;
 
         ASSERT_TRUE(stereo_features.size() > 0);

@@ -18,9 +18,9 @@ SurfExtractor::SurfExtractor() : FeatureExtractor(),
 {
 }
 
-void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
+void SurfExtractor::extract(const cv::Mat& image,
         std::vector<KeyPoint>& key_points,
-        cv::Mat& descriptors)
+        cv::Mat& descriptors, const cv::Rect& roi)
 {
     assert(image.type() == CV_8UC3 || image.type() == CV_8U);
 
@@ -38,6 +38,21 @@ void SurfExtractor::extract(const cv::Mat& image, const cv::Mat& mask,
     
     surf_.init(gray_image);
     surf_.detect(cv_key_points);
+
+    // filter roi
+    if (roi.width != 0 && roi.height != 0)
+    {
+        std::vector<cv::KeyPoint> filtered_key_points;
+        for (size_t i = 0; i < cv_key_points.size(); ++i)
+        {
+            if (roi.contains(cv_key_points[i].pt))
+            {
+                filtered_key_points.push_back(cv_key_points[i]);
+            }
+        }
+        cv_key_points = filtered_key_points;
+    }
+
     if (cv_key_points.size() > (unsigned int)max_num_key_points_)
     {
         std::partial_sort(cv_key_points.begin(), 
