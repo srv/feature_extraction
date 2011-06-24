@@ -201,9 +201,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             // Update the camera model
             stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
 
-            // apply roi
-            cv::Mat left_image = cv::Mat(cv_ptr_left->image, region_of_interest_);
-            cv::Mat right_image = cv::Mat(cv_ptr_right->image, region_of_interest_);
+            cv::Mat left_image = cv_ptr_left->image;
+            cv::Mat right_image = cv_ptr_right->image;
 
             // Calculate stereo features
             std::vector<StereoFeature> stereo_features = 
@@ -302,16 +301,30 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     bool setRegionOfInterestSrvCb(SetRegionOfInterest::Request& request,
                          SetRegionOfInterest::Response& response)
     {
-        region_of_interest_.x = request.x;
-        region_of_interest_.y = request.y;
-        region_of_interest_.width = request.width;
-        region_of_interest_.height = request.height;
-        ROS_INFO("Region of interest set to: (%i, %i), %ix%i due to service call",
-                region_of_interest_.x,
-                region_of_interest_.y,
-                region_of_interest_.width,
-                region_of_interest_.height);
-        return true;
+        if (request.x >= 0 && request.y >= 0)
+        {
+            region_of_interest_.x = request.x;
+            region_of_interest_.y = request.y;
+            region_of_interest_.width = request.width;
+            region_of_interest_.height = request.height;
+            ROS_INFO("Region of interest set to: (%i, %i), %ix%i due to service call",
+                    region_of_interest_.x,
+                    region_of_interest_.y,
+                    region_of_interest_.width,
+                    region_of_interest_.height);
+            stereo_feature_extractor_.setRegionOfInterest(region_of_interest_);
+            return true;
+        }
+        else
+        {
+            ROS_WARN("Invalid region of interest given (%i, %i, %ix%i), "
+                     "leaving ROI untouched.",
+                request.x,
+                request.y,
+                request.width,
+                request.height);
+            return false;
+        }
     }
 
     boost::shared_ptr<image_transport::ImageTransport> it_;

@@ -69,6 +69,7 @@ void StereoFeatureExtractor::setMaxDepth(double max_depth)
 
 void StereoFeatureExtractor::setRegionOfInterest(const cv::Rect& roi)
 {
+    assert(roi.x >= 0 && roi.y >= 0 && roi.width >= 0 && roi.height >= 0);
     region_of_interest_ = roi;
 }
 
@@ -82,8 +83,13 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
 
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
+    cv::Rect roi_left = region_of_interest_;
+    if (roi_left.x + roi_left.width > image_left.cols) 
+        roi_left.width = image_left.cols - roi_left.x;
+    if (roi_left.y + roi_left.height > image_left.rows)
+        roi_left.height = image_left.rows - roi_left.y;
     feature_extractor_->extract(image_left, key_points_left,
-            descriptors_left, region_of_interest_);
+            descriptors_left, roi_left);
 
     std::vector<StereoFeature> stereo_features;
     for (size_t i = 0; i < key_points_left.size(); ++i)
@@ -176,18 +182,38 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
 
     std::vector<KeyPoint> key_points_left;
     cv::Mat descriptors_left;
-    feature_extractor_->extract(image_left, key_points_left, 
-            descriptors_left, region_of_interest_);
 
-    std::vector<KeyPoint> key_points_right;
-    cv::Mat descriptors_right;
-    // we do not give a roi to the right image because it had to be shifted 
-    // in an unknown way
-    feature_extractor_->extract(image_right, key_points_right,
-            descriptors_right);
+    cv::Rect roi_left = region_of_interest_;
+    if (roi_left.x + roi_left.width > image_left.cols) 
+        roi_left.width = image_left.cols - roi_left.x;
+    if (roi_left.y + roi_left.height > image_left.rows)
+        roi_left.height = image_left.rows - roi_left.y;
+    
+    std::cout << "roi left: " << roi_left.tl() << " " << roi_left.br() << std::endl;
+ 
+    feature_extractor_->extract(image_left, key_points_left, 
+            descriptors_left, roi_left);
 
     double min_disparity = stereo_camera_model_->getDisparity(max_depth_);
     double max_disparity = stereo_camera_model_->getDisparity(min_depth_);
+
+    std::vector<KeyPoint> key_points_right;
+    cv::Mat descriptors_right;
+
+    // compute roi for right image
+    cv::Rect roi_right = roi_left;
+    if (roi_left.width != 0 && roi_left.height != 0)
+    {
+        roi_right.x -= max_disparity;
+        if (roi_right.x < 0) roi_right.x = 0;
+        roi_right.width += max_disparity - min_disparity;
+        if (roi_right.width > image_right.cols) roi_right.width = image_right.cols;
+    }
+    std::cout << "roi right: " << roi_right.tl() << " " << roi_right.br() << std::endl;
+
+    feature_extractor_->extract(image_right, key_points_right,
+            descriptors_right, roi_right);
+
 
     cv::Mat match_mask;
     computeMatchMask(key_points_left, key_points_right, match_mask, max_y_diff_,
