@@ -8,7 +8,7 @@
 
 using namespace stereo_feature_extraction;
 
-TEST(Extractor, runTest)
+void runTest(const std::string& extractor_name)
 {
     std::vector<std::string> extractor_names;
     extractor_names.push_back("CvSURF");
@@ -18,22 +18,29 @@ TEST(Extractor, runTest)
     cv::Mat image = cv::imread(path + "/data/black_box.jpg");
     ASSERT_FALSE(image.empty());
 
-    for (size_t i = 0; i < extractor_names.size(); ++i)
-    {
-        FeatureExtractor::Ptr extractor =
-            FeatureExtractorFactory::create(extractor_names[i]);
+    FeatureExtractor::Ptr extractor =
+        FeatureExtractorFactory::create(extractor_name);
 
-        cv::Mat mask;
-        std::vector<KeyPoint> key_points;
-        cv::Mat descriptors;
-        double time = (double)cv::getTickCount();
-        extractor->extract(image, key_points, descriptors);
-        time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
+    cv::Mat mask;
+    std::vector<KeyPoint> key_points;
+    cv::Mat descriptors;
+    double time = (double)cv::getTickCount();
+    extractor->extract(image, key_points, descriptors);
+    time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
 
-        ASSERT_GT(key_points.size(), 0);
-        std::cout << extractor_names[i] << " extracted " << key_points.size() 
-            << " key points in " << time << "ms." << std::endl;
-    }
+    ASSERT_GT(key_points.size(), 0);
+    std::cout << extractor_name << " extracted " << key_points.size() 
+        << " key points in " << time << "ms." << std::endl;
+}
+
+TEST(Extractor, cvSurfRunTest)
+{
+    runTest("CvSURF");
+}
+
+TEST(Extractor, surfRunTest)
+{
+    runTest("SURF");
 }
 
 TEST(Extractor, maxNumPointsTest)

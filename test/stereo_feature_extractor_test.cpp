@@ -19,23 +19,15 @@
 
 using namespace stereo_feature_extraction;
 
-TEST(StereoFeatureExtractor, runTest)
+StereoFeatureExtractor createStandardExtractor()
 {
-    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
-    path += "/data/";
-
-    // load image
-    cv::Mat image_left = cv::imread(path + "left_100cm.jpg");
-    ASSERT_FALSE(image_left.empty());
-    cv::Mat image_right = cv::imread(path + "right_100cm.jpg");
-    ASSERT_FALSE(image_right.empty());
-
     FeatureExtractor::Ptr feature_extractor = 
         FeatureExtractorFactory::create("SURF");
 
     // read calibration data to fill stereo camera model
-    std::string left_file = path + "real_calibration_left.yaml";
-    std::string right_file = path + "real_calibration_right.yaml";
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+    std::string left_file = path + "/data/real_calibration_left.yaml";
+    std::string right_file = path + "/data/real_calibration_right.yaml";
 
     StereoCameraModel::Ptr stereo_camera_model = 
         StereoCameraModel::Ptr(new StereoCameraModel());
@@ -44,21 +36,51 @@ TEST(StereoFeatureExtractor, runTest)
     StereoFeatureExtractor extractor;
     extractor.setFeatureExtractor(feature_extractor);
     extractor.setCameraModel(stereo_camera_model);
+    return extractor;
+}
 
-    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
+void runTest(StereoFeatureExtractor::MatchMethod match_method)
+{
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+
+    // load image
+    cv::Mat image_left = cv::imread(path + "/data/left_100cm.jpg");
+    ASSERT_FALSE(image_left.empty());
+    cv::Mat image_right = cv::imread(path + "/data/right_100cm.jpg");
+    ASSERT_FALSE(image_right.empty());
+
+    StereoFeatureExtractor extractor = createStandardExtractor();
+
+    extractor.setMatchMethod(match_method);
     double time = (double)cv::getTickCount();
     std::vector<StereoFeature> stereo_features = 
         extractor.extract(image_left, image_right);
     time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
-    std::cout << "Key point to key point matching: found " << stereo_features.size() << " stereo features" 
+    std::cout << "Found " << stereo_features.size() << " stereo features" 
         << " in " << time << "ms." << std::endl;
+}
 
-    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_BLOCK);
-    time = (double)cv::getTickCount();
-    stereo_features = extractor.extract(image_left, image_right);
-    time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
-    std::cout << "Key point to block matching: found " << stereo_features.size() << " stereo features" 
-        << " in " << time << "ms." << std::endl;
+TEST(StereoFeatureExtractor, keyPointToBlockRunTest)
+{
+    runTest(StereoFeatureExtractor::KEY_POINT_TO_BLOCK);
+}
+
+TEST(StereoFeatureExtractor, keyPointToKeyPointRunTest)
+{
+    runTest(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
+}
+
+TEST(StereoFeatureExtractor, roiTest)
+{
+    std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
+
+    // load image
+    cv::Mat image_left = cv::imread(path + "/data/left_100cm.jpg");
+    ASSERT_FALSE(image_left.empty());
+    cv::Mat image_right = cv::imread(path + "/data/right_100cm.jpg");
+    ASSERT_FALSE(image_right.empty());
+
+    StereoFeatureExtractor extractor = createStandardExtractor();
 
     // try run on region of interest 
     int roi_x = image_left.cols / 4;
@@ -67,10 +89,10 @@ TEST(StereoFeatureExtractor, runTest)
     int roi_height = image_left.rows / 2;
     cv::Rect roi(roi_x, roi_y, roi_width, roi_height);
     extractor.setRegionOfInterest(roi);
-    extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
     extractor.setMinDepth(0.5);
     extractor.setMaxDepth(1.5);
-    stereo_features = extractor.extract(image_left, image_right);
+    std::vector<StereoFeature> stereo_features = 
+        extractor.extract(image_left, image_right);
     EXPECT_GT(stereo_features.size(), 0);
 
     // check for right depth and coordinates inside roi
