@@ -55,5 +55,51 @@ bool StereoFeatureSet::savePointCloud(const std::string& file_name)
     return true;
 }
 
+bool StereoFeatureSet::saveFeatureCloud(const std::string& file_name)
+{
+    std::ofstream out(file_name.c_str());
+    if (!out.is_open())
+    {
+        std::cerr << "Error: StereoFeatureSet::saveFeatureCloud(): "
+            " Cannot open file '" << file_name << "' for writing!" << std::endl;
+        return false;
+    }
+    
+    int descriptor_size; 
+    if (stereo_features.size() == 0)
+    {
+        descriptor_size = 0;
+    }
+    else
+    {
+        descriptor_size = stereo_features[0].descriptor.cols;
+    }
+    out << "# Stereo Feature Descriptors" << std::endl;
+    out << "VERSION .7" << std::endl;
+    out << "FIELDS descriptor" << std::endl;
+    out << "SIZE " << sizeof(float) * descriptor_size << std::endl;
+    out << "TYPE F" << std::endl;
+    out << "COUNT " << descriptor_size << std::endl;
+    out << "WIDTH " << stereo_features.size() << std::endl;
+    out << "HEIGHT 1" << std::endl;
+    out << "VIEWPOINT 0 0 0 1 0 0 0" << std::endl;
+    out << "POINTS " << stereo_features.size() << std::endl;
+    out << "DATA ascii" << std::endl;
+    for (size_t i = 0; i < stereo_features.size(); ++i)
+    {
+        cv::Mat& descriptor = stereo_features[i].descriptor;
+        if (descriptor.rows == 1)
+        {
+            for (int c = 0; c < descriptor.cols; ++c)
+            {
+                out << descriptor.at<float>(0, c) << " ";
+            }
+        }
+        out << std::endl;
+    }
+    out.close();
+    return true;
+}
+
 }
 

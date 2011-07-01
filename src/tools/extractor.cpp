@@ -31,6 +31,7 @@ int main(int argc, char** argv)
         ("max_num_key_points,M", po::value<int>()->default_value(5000), 
                 "maximum number of key points to extract")
         ("cloud_file,C", po::value<string>(), "file name for output point cloud")
+        ("descriptor_file,D", po::value<string>(), "file name for output descriptors")
         ;
 
     po::variables_map vm;
@@ -105,11 +106,29 @@ int main(int argc, char** argv)
     if (vm.count("cloud_file"))
     {
         std::string file_name = vm["cloud_file"].as<std::string>();
-        stereo_feature_set.savePointCloud(file_name);
-
-        std::cout << "Written point cloud to file '" << file_name << "'." 
-            << std::endl;
+        if (stereo_feature_set.savePointCloud(file_name))
+        {
+            std::cout << "Written point cloud to file '" << file_name << "'." 
+                << std::endl;
+        }
+        else
+        {
+            std::cerr << "Could not write points." << std::endl;
+        }
     }
-    return 0; 
+
+    if (vm.count("descriptor_file"))
+    {
+        std::string file_name = vm["descriptor_file"].as<std::string>();
+        if (stereo_feature_set.saveFeatureCloud(file_name))
+        {
+            std::cout << "Written descriptors to file '" << file_name << "'." 
+                 << std::endl;
+        }
+        else
+        {
+            std::cerr << "Could not save features." << std::endl;
+        }
+    }    return 0; 
 }
 
