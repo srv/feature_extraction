@@ -205,8 +205,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv::Mat right_image = cv_ptr_right->image;
 
             // Calculate stereo features
-            std::vector<StereoFeature> stereo_features = 
+            StereoFeatureSet stereo_feature_set = 
                 stereo_feature_extractor_.extract(left_image, right_image);
+            std::vector<StereoFeature>& stereo_features = 
+                stereo_feature_set.stereo_features;
 
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)

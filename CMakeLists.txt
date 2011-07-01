@@ -31,4 +31,5 @@ rosbuild_gensrv()
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(evaluation)
 

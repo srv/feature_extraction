@@ -74,7 +74,7 @@ void StereoFeatureExtractor::setRegionOfInterest(const cv::Rect& roi)
 }
 
 
-std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
+StereoFeatureSet StereoFeatureExtractor::extractKeyPointToBlock(
         const cv::Mat& image_left, const cv::Mat& image_right, 
         double max_distance) const
 {
@@ -91,7 +91,8 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
     feature_extractor_->extract(image_left, key_points_left,
             descriptors_left, roi_left);
 
-    std::vector<StereoFeature> stereo_features;
+    StereoFeatureSet stereo_feature_set;
+    std::vector<StereoFeature>& stereo_features = stereo_feature_set.stereo_features;
     for (size_t i = 0; i < key_points_left.size(); ++i)
     {
         const KeyPoint& key_point_left = key_points_left[i];
@@ -113,7 +114,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToBlock(
             stereo_features.push_back(stereo_feature);
         }
     }
-    return stereo_features;
+    return stereo_feature_set;
 }
 
 cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_left,
@@ -161,7 +162,7 @@ cv::Point2f StereoFeatureExtractor::findCorrespondenceBM(const cv::Mat& image_le
     return cv::Point2f(0, 0);
 }
 
-std::vector<StereoFeature> StereoFeatureExtractor::extract(
+StereoFeatureSet StereoFeatureExtractor::extract(
         const cv::Mat& image_left, const cv::Mat& image_right) const
 {
     if (match_method_ == KEY_POINT_TO_KEY_POINT)
@@ -174,7 +175,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extract(
     }
 }
 
-std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
+StereoFeatureSet StereoFeatureExtractor::extractKeyPointToKeyPoint(
         const cv::Mat& image_left, const cv::Mat& image_right) const
 {
     assert(feature_extractor_.get() != NULL);
@@ -223,7 +224,9 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
     //crossCheckMatching(descriptors_left, descriptors_right, matches, match_mask);
     thresholdMatching(descriptors_left, descriptors_right, matches, match_mask);
 
-    std::vector<StereoFeature> stereo_features(matches.size());
+    StereoFeatureSet stereo_feature_set;
+    std::vector<StereoFeature>& stereo_features = stereo_feature_set.stereo_features;
+    stereo_features.resize(matches.size());
     for (size_t i = 0; i < matches.size(); ++i)
     {
         int index_left = matches[i].queryIdx;
@@ -241,7 +244,7 @@ std::vector<StereoFeature> StereoFeatureExtractor::extractKeyPointToKeyPoint(
             image_left.at<cv::Vec3b>(key_point_left.pt.y,
                                      key_point_left.pt.x);
     }
-    return stereo_features;
+    return stereo_feature_set;
 }
 
 
