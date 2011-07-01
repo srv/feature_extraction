@@ -3,7 +3,7 @@
 
 #include <opencv2/features2d/features2d.hpp>
 
-#include "stereo_feature.h"
+#include "stereo_feature_set.h"
 #include "feature_extractor.h"
 #include "stereo_camera_model.h"
 
@@ -98,9 +98,9 @@ class StereoFeatureExtractor
     *
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-    * \return vector of stereo features
+    * \return set of stereo features
     */
-    std::vector<StereoFeature> extract(const cv::Mat& image_left, 
+    StereoFeatureSet extract(const cv::Mat& image_left, 
             const cv::Mat& image_right) const;
 
 
@@ -176,9 +176,9 @@ class StereoFeatureExtractor
     * stereo camera model.
     * \param image_left the left rectified image
     * \param image_right the right rectified image
-     * \return vector of stereo features
+     * \return set of stereo features
     */
-    std::vector<StereoFeature> extractKeyPointToKeyPoint(
+    StereoFeatureSet extractKeyPointToKeyPoint(
             const cv::Mat& image_left, const cv::Mat& image_right) const;
 
     /**
@@ -194,7 +194,7 @@ class StereoFeatureExtractor
     * \param max_distance the block matching threshold
     * \return vector of stereo features
     */
-    std::vector<StereoFeature> extractKeyPointToBlock(const cv::Mat& image_left, 
+    StereoFeatureSet extractKeyPointToBlock(const cv::Mat& image_left, 
             const cv::Mat& image_right, double max_distance) const;
 
     /**

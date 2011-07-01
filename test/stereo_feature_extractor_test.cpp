@@ -53,11 +53,11 @@ void runTest(StereoFeatureExtractor::MatchMethod match_method)
 
     extractor.setMatchMethod(match_method);
     double time = (double)cv::getTickCount();
-    std::vector<StereoFeature> stereo_features = 
+    StereoFeatureSet stereo_feature_set = 
         extractor.extract(image_left, image_right);
     time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
-    std::cout << "Found " << stereo_features.size() << " stereo features" 
-        << " in " << time << "ms." << std::endl;
+    std::cout << "Found " << stereo_feature_set.stereo_features.size() 
+        << " stereo features" << " in " << time << "ms." << std::endl;
 }
 
 TEST(StereoFeatureExtractor, keyPointToBlockRunTest)
@@ -91,8 +91,10 @@ TEST(StereoFeatureExtractor, roiTest)
     extractor.setRegionOfInterest(roi);
     extractor.setMinDepth(0.5);
     extractor.setMaxDepth(1.5);
-    std::vector<StereoFeature> stereo_features = 
+    StereoFeatureSet stereo_feature_set = 
         extractor.extract(image_left, image_right);
+    std::vector<StereoFeature>& stereo_features = 
+        stereo_feature_set.stereo_features;
     EXPECT_GT(stereo_features.size(), 0);
 
     // check for right depth and coordinates inside roi
@@ -139,8 +141,10 @@ TEST(StereoFeatureExtractor, depthResolutionTest)
         extractor.setMatchMethod(StereoFeatureExtractor::KEY_POINT_TO_KEY_POINT);
         extractor.setCameraModel(stereo_camera_model);
 
-        std::vector<StereoFeature> stereo_features = 
+        StereoFeatureSet stereo_feature_set = 
             extractor.extract(image_left, image_right);
+        std::vector<StereoFeature>& stereo_features =
+            stereo_feature_set.stereo_features;
         std::cout << "Found " << stereo_features.size() << " stereo features." << std::endl;
 
         ASSERT_TRUE(stereo_features.size() > 0);
@@ -255,8 +259,10 @@ TEST(StereoFeatureExtractor, roiSpeedTest)
     extractor.setCameraModel(stereo_camera_model);
 
     double time = (double)cv::getTickCount();
-    std::vector<StereoFeature> stereo_features = 
+    StereoFeatureSet stereo_feature_set = 
         extractor.extract(image_left, image_right);
+    std::vector<StereoFeature>& stereo_features = 
+        stereo_feature_set.stereo_features;
     time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
     std::cout << "Image " << image_left.cols << "x" << image_left.rows 
         << " found " << stereo_features.size() << " stereo features" 
@@ -267,11 +273,11 @@ TEST(StereoFeatureExtractor, roiSpeedTest)
         cv::Rect roi(0, 0, w, w);
         extractor.setRegionOfInterest(roi);
         double time = (double)cv::getTickCount();
-        stereo_features = extractor.extract(image_left, image_right);
+        stereo_feature_set = extractor.extract(image_left, image_right);
         time = ((double)cv::getTickCount() - time)/cv::getTickFrequency() * 1000;
         std::cout << "Image " << w << "x" << w 
-            << " found " << stereo_features.size() << " stereo features" 
-            << " in " << time << "ms." << std::endl;
+            << " found " << stereo_feature_set.stereo_features.size()
+            << " stereo features" << " in " << time << "ms." << std::endl;
     }
 }
 
