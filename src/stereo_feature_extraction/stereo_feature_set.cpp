@@ -34,7 +34,6 @@ bool StereoFeatureSet::savePointCloud(const std::string& file_name)
         return false;
     }
     out << "# Stereo Feature 3D points" << std::endl;
-    out << "VERSION .7" << std::endl;
     out << "FIELDS x y z rgb" << std::endl;
     out << "SIZE 4 4 4 4" << std::endl;
     out << "TYPE F F F F" << std::endl;
@@ -75,9 +74,8 @@ bool StereoFeatureSet::saveFeatureCloud(const std::string& file_name)
         descriptor_size = stereo_features[0].descriptor.cols;
     }
     out << "# Stereo Feature Descriptors" << std::endl;
-    out << "VERSION .7" << std::endl;
-    out << "FIELDS descriptor" << std::endl;
-    out << "SIZE " << sizeof(float) * descriptor_size << std::endl;
+    out << "FIELDS data" << std::endl;
+    out << "SIZE 4" << std::endl;
     out << "TYPE F" << std::endl;
     out << "COUNT " << descriptor_size << std::endl;
     out << "WIDTH " << stereo_features.size() << std::endl;
