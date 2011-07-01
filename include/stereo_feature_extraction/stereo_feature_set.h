@@ -17,12 +17,12 @@ class StereoFeatureSet
         * http://pointclouds.org/documentation/tutorials/pcd_file_format.php
         * for a description of the format.
         */
-        void savePointCloud(const std::string& file_name);
+        bool savePointCloud(const std::string& file_name);
 
         /**
         * Saves the feature descriptors as a point cloud data file
         */
-        void saveFeatureCloud(const std::string& file_name);
+        bool saveFeatureCloud(const std::string& file_name);
 
         /**
         * Holds the features
@@ -31,5 +31,9 @@ class StereoFeatureSet
 };
 
 }
+
+std::ostream& operator<<(std::ostream& ostream,
+        const stereo_feature_extraction::StereoFeatureSet& feature_set);
+
 
 #endif

@@ -240,8 +240,10 @@ int main(int argc, char **argv){
         cv::Mat left_image, right_image;
         loadImages(distance_to_test, left_image, right_image);
 
-        std::vector<StereoFeature> stereo_features = 
+        StereoFeatureSet stereo_feature_set = 
             extractor.extract(left_image, right_image);
+        std::vector<StereoFeature>& stereo_features = 
+            stereo_feature_set.stereo_features;
 
         std::cout << "Found " << stereo_features.size() << " stereo features." << std::endl;
 
