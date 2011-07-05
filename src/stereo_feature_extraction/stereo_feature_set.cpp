@@ -1,4 +1,6 @@
 #include <fstream>
+#include <algorithm>
+#include <iomanip>
 
 #include "stereo_feature_set.h"
 
@@ -20,8 +22,10 @@ namespace stereo_feature_extraction
 
 float packRgb_(const cv::Vec3b& color)
 {
-    int32_t rgb = (color[2] << 16) | (color[1] << 8) | color[0];
-    return rgb;
+    int32_t rgb = ((int)color[2] << 16) | ((int)color[1] << 8) | (int)color[0];
+    float rgb_f = 0.0;
+    memcpy(&rgb_f, &rgb, sizeof(int32_t));
+    return rgb_f;
 }
 
 bool StereoFeatureSet::savePointCloud(const std::string& file_name)
@@ -48,7 +52,7 @@ bool StereoFeatureSet::savePointCloud(const std::string& file_name)
         out << stereo_features[i].world_point.x << " ";
         out << stereo_features[i].world_point.y << " ";
         out << stereo_features[i].world_point.z << " ";
-        out << packRgb_(stereo_features[i].color) << std::endl;
+        out << setprecision(20) << packRgb_(stereo_features[i].color) << std::endl;
     }
     out.close();
     return true;
