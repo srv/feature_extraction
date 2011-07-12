@@ -32,6 +32,7 @@ int main(int argc, char** argv)
                 "maximum number of key points to extract")
         ("cloud_file,C", po::value<string>(), "file name for output point cloud")
         ("descriptor_file,D", po::value<string>(), "file name for output descriptors")
+        ("display", "display matching output (blocks while window is open)")
         ;
 
     po::variables_map vm;
@@ -95,13 +96,16 @@ int main(int argc, char** argv)
     std::cout << "found " << stereo_feature_set.stereo_features.size() 
         << " stereo features." << std::endl;
 
-    cv::Mat result_image;
-    drawStereoFeatures(result_image, image_left, image_right, 
-            stereo_feature_set.stereo_features);
+    if (vm.count("display"))
+    {
+        cv::Mat result_image;
+        drawStereoFeatures(result_image, image_left, image_right, 
+                stereo_feature_set.stereo_features);
 
-    cv::namedWindow("matchings", CV_WINDOW_NORMAL);
-    cv::imshow("matchings", result_image);
-    cvWaitKey();
+        cv::namedWindow("matchings", CV_WINDOW_NORMAL);
+        cv::imshow("matchings", result_image);
+        cvWaitKey();
+    }
 
     if (vm.count("cloud_file"))
     {
