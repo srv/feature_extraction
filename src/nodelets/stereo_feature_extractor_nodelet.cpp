@@ -18,6 +18,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+
 #include "stereo_camera_model.h"
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
@@ -28,6 +31,19 @@
 namespace stereo_feature_extraction
 {
 
+struct Feature
+{
+    float data[64];
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+
+POINT_CLOUD_REGISTER_POINT_STRUCT (stereo_feature_extraction::Feature,
+                                (float[64], data, data)
+                                )
+
+namespace stereo_feature_extraction
+{
 class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 {
   public:
@@ -35,6 +51,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         stereo_camera_model_(new StereoCameraModel())
     { }
 
+    typedef pcl::PointCloud<Feature> FeatureCloud;
+    typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 
   private:
     virtual void onInit()
@@ -51,6 +69,12 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 connect_cb, connect_cb);
 
         pub_points_ = nh.advertise<sensor_msgs::PointCloud2>("stereo_feature_points", 1,
+                connect_cb, connect_cb);
+
+        pub_point_cloud_ = nh.advertise<PointCloud>("point_cloud", 1,
+                connect_cb, connect_cb);
+
+        pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1,
                 connect_cb, connect_cb);
 
         pub_debug_image_ = nh.advertise<sensor_msgs::Image>("stereo_features_debug_image", 1,
@@ -131,7 +155,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     {
         if (pub_features_.getNumSubscribers() == 0 && 
             pub_debug_image_.getNumSubscribers() == 0 &&
-            pub_points_.getNumSubscribers() == 0)
+            pub_points_.getNumSubscribers() == 0 &&
+            pub_feature_cloud_.getNumSubscribers() == 0 &&
+            pub_point_cloud_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
             sub_l_image_  .unsubscribe();
@@ -250,6 +276,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             points_msg.is_dense = false; // there may be invalid points
 
             features_msg->features.resize(stereo_features.size());
+            FeatureCloud::Ptr feature_cloud(new FeatureCloud());
+            feature_cloud->header = l_image_msg.header;
+            PointCloud::Ptr point_cloud(new PointCloud());
+            point_cloud->header = l_image_msg.header;
             for (size_t i = 0; i < stereo_features.size(); ++i)
             {
                 // fill data of
@@ -271,6 +301,19 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 features_msg->features[i].x = stereo_features[i].key_point_left.pt.x;
                 features_msg->features[i].y = stereo_features[i].key_point_left.pt.y;
                 features_msg->features[i].descriptor = stereo_features[i].descriptor;
+
+                pcl::PointXYZRGB pcl_point;
+                pcl_point.x = point.x;
+                pcl_point.y = point.y;
+                pcl_point.z = point.z;
+                memcpy(&pcl_point.rgb, &rgb_packed, sizeof(int32_t));
+                //std::copy(&pcl_point.rgb, &pcl_point.rgb + 1, &rgb_packed);
+                point_cloud->points.push_back(pcl_point);
+
+                Feature feature;
+                std::vector<float> descriptor = stereo_features[i].descriptor;
+                std::copy(descriptor.begin(), descriptor.end(), feature.data);
+                feature_cloud->points.push_back(feature);
             }
 
             if (pub_debug_image_.getNumSubscribers() > 0)
@@ -286,6 +329,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 cv_image.image = canvas;
                 pub_debug_image_.publish(cv_image.toImageMsg());
             }
+
+            pub_point_cloud_.publish(point_cloud);
+            pub_feature_cloud_.publish(feature_cloud);
 
             return features_msg;
         }
@@ -347,6 +393,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     ros::Publisher pub_features_;
     ros::Publisher pub_debug_image_;
     ros::Publisher pub_points_;
+    ros::Publisher pub_point_cloud_;
+    ros::Publisher pub_feature_cloud_;
 
     // Processing state (note: only safe because we're single-threaded!)
     image_geometry::StereoCameraModel model_;
