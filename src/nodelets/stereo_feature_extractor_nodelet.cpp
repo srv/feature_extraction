@@ -82,12 +82,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("approximate_sync", approx, false);
 
         double max_y_diff, max_angle_diff, min_depth, max_depth;
-        int max_size_diff;
+        int max_size_diff, max_num_key_points;
         private_nh.param("max_y_diff", max_y_diff, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff, 2.0);
         private_nh.param("max_size_diff", max_size_diff, 2);
         private_nh.param("min_depth", min_depth, 0.2);
         private_nh.param("max_depth", max_depth, 5.0);
+        private_nh.param("max_num_key_points", max_num_key_points, 5000);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -101,6 +102,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
         else
         {
+            feature_extractor->setMaxNumKeyPoints(max_num_key_points);
             stereo_feature_extractor_.setFeatureExtractor(feature_extractor);
         }
         stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
@@ -115,7 +117,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                   << " max_angle_diff = " << max_angle_diff
                   << " max_size_diff = " << max_size_diff
                   << " depth min/max = " << min_depth << "/" << max_depth
-                  << " feature_extractor = " << feature_extractor_name);
+                  << " feature_extractor = " << feature_extractor_name
+                  << " max_num_key_points = " << max_num_key_points);
         if (approx)
         {
             approximate_sync_.reset(
