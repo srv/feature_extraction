@@ -1,18 +1,20 @@
 <launch>
-    
-    <node pkg="nodelet" type="nodelet" name="image_services_manager" 
-        args="manager" output="screen"/>
 
-    <group ns="/forward_stereo_camera/">
+    <!-- launch arguments -->
+    <arg name="manager" />
+    <arg name="camera" />
+
+    <group ns="$(arg camera)">
         <node pkg="nodelet" type="nodelet" name="stereo_feature_extractor"
-            args="load stereo_feature_extraction/stereo_feature_extractor /image_services_manager"
+            args="load stereo_feature_extraction/stereo_feature_extractor $(arg manager)"
             output="screen">
             <param name="max_y_diff" value="1.0" />
             <param name="max_angle_diff" value="2.0" />
             <param name="max_size_diff" value="1" />
             <param name="feature_extractor" value="SURF" />
+            <param name="max_num_key_points" value="1500" />
         </node>
-     </group>
+    </group>
 
 </launch>
 

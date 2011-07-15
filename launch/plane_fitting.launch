@@ -1,15 +1,14 @@
 <launch>
 
-    <include file="$(find fugu_configurations)/launch/camera_flex_narrow.launch" />
-    <include file="$(find stereo_feature_extraction)/launch/image_proc_extractor.launch" />
+    <include file="$(find stereo_feature_extraction)/launch/manager_camera_image_proc_extractor.launch" />
 
     <node name="image_view" pkg="image_view" type="image_view" output="screen">
-        <remap from="image" to="/forward_stereo_camera/stereo_features_debug_image" />
+        <remap from="image" to="forward_stereo_camera/stereo_features_debug_image" />
     </node>
 
     <node name="plane_fitting" pkg="stereo_feature_extraction" 
           type="plane_fitting_node" output="screen">
-        <remap from="point_cloud" to="/forward_stereo_camera/point_cloud" />
+        <remap from="point_cloud" to="forward_stereo_camera/point_cloud" />
     </node>
 
 </launch>

@@ -8,7 +8,6 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/sync_policies/approximate_time.h>
-#include <image_proc/advertisement_checker.h>
 
 #include <image_geometry/stereo_camera_model.h>
 
