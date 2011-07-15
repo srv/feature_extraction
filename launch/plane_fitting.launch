@@ -9,7 +9,7 @@
 
     <node name="plane_fitting" pkg="stereo_feature_extraction" 
           type="plane_fitting_node" output="screen">
-        <remap from="stereo_features" to="/forward_stereo_camera/stereo_features" />
+        <remap from="point_cloud" to="/forward_stereo_camera/point_cloud" />
     </node>
 
 </launch>

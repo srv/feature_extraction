@@ -6,8 +6,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
-
-#include <vision_msgs/StereoFeatures.h>
+#include <pcl_ros/point_cloud.h>
 
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
@@ -15,12 +14,14 @@
 
 using namespace stereo_feature_extraction;
 
+typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
+
 class PlaneFittingNode
 {
     ros::NodeHandle nh_;
     ros::NodeHandle nh_private_;
 
-    ros::Subscriber stereo_features_sub_;
+    ros::Subscriber point_cloud_sub_;
 
   public:
     PlaneFittingNode() : nh_private_("~")
@@ -34,31 +35,22 @@ class PlaneFittingNode
 
     void init()
     {
-        stereo_features_sub_ = nh_.subscribe("stereo_features", 1, &PlaneFittingNode::stereoFeaturesCb, this);
+        point_cloud_sub_ = nh_.subscribe<PointCloud>("point_cloud", 1, &PlaneFittingNode::pointCloudCb, this);
     }
 
-    void stereoFeaturesCb(const vision_msgs::StereoFeaturesConstPtr& features_msg)
+    void pointCloudCb(const PointCloud::ConstPtr& point_cloud)
     {
-        // return if there are no features
-        if (features_msg->world_points.width * features_msg->world_points.height == 0) 
-        {
-            return;
-        }
-
-        pcl::PointCloud<pcl::PointXYZRGB> point_cloud;
-        pcl::fromROSMsg(features_msg->world_points, point_cloud);
-
         pcl::ModelCoefficients coefficients;
         pcl::PointIndices inliers;
         // Create the segmentation object
-        pcl::SACSegmentation<pcl::PointXYZRGB> seg;
+        pcl::SACSegmentation<PointCloud::PointType> seg;
         // Optional
         seg.setOptimizeCoefficients (true);
         // Mandatory
         seg.setModelType(pcl::SACMODEL_PLANE);
         seg.setMethodType(pcl::SAC_RANSAC);
         seg.setDistanceThreshold(0.05);
-        seg.setInputCloud(point_cloud.makeShared());
+        seg.setInputCloud(point_cloud);
         seg.segment(inliers, coefficients);
 
         // there must be some inliers
@@ -80,7 +72,7 @@ class PlaneFittingNode
         std::vector<double> distances(inliers.indices.size());
         for (size_t i = 0; i < inliers.indices.size(); ++i)
         {
-            const pcl::PointXYZRGB& point = point_cloud.points[inliers.indices[i]];
+            const PointCloud::PointType& point = point_cloud->points[inliers.indices[i]];
             distances[i] = std::abs(a * point.x + b * point.y + c * point.z + d);
         }
 

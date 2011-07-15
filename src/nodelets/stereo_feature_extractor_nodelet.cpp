@@ -12,22 +12,36 @@
 
 #include <image_geometry/stereo_camera_model.h>
 
-#include <vision_msgs/StereoFeatures.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/RegionOfInterest.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
+
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include "stereo_camera_model.h"
 #include "stereo_feature_extractor.h"
 #include "feature_extractor_factory.h"
 #include "drawing.h"
 
-#include "stereo_feature_extraction/SetRegionOfInterest.h" // generated srv header
-
 namespace stereo_feature_extraction
 {
 
+struct Feature
+{
+    float data[64];
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+} EIGEN_ALIGN16;
+}
+
+POINT_CLOUD_REGISTER_POINT_STRUCT (stereo_feature_extraction::Feature,
+                                (float[64], data, data)
+                                )
+
+namespace stereo_feature_extraction
+{
 class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 {
   public:
@@ -35,6 +49,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         stereo_camera_model_(new StereoCameraModel())
     { }
 
+    typedef pcl::PointCloud<Feature> FeatureCloud;
+    typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 
   private:
     virtual void onInit()
@@ -47,14 +63,16 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         ros::SubscriberStatusCallback connect_cb = 
             boost::bind(&StereoFeatureExtractorNodelet::connectCb, this);
 
-        pub_features_  = nh.advertise<vision_msgs::StereoFeatures>("stereo_features",  1, 
+        pub_point_cloud_ = nh.advertise<PointCloud>("point_cloud", 1,
                 connect_cb, connect_cb);
 
-        pub_points_ = nh.advertise<sensor_msgs::PointCloud2>("stereo_feature_points", 1,
+        pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1,
                 connect_cb, connect_cb);
 
         pub_debug_image_ = nh.advertise<sensor_msgs::Image>("stereo_features_debug_image", 1,
                 connect_cb, connect_cb);
+
+        sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &StereoFeatureExtractorNodelet::setRegionOfInterest, this);
 
         // Synchronize inputs. Topic subscriptions happen on demand in the 
         // connection callback. Optionally do approximate synchronization.
@@ -64,12 +82,13 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("approximate_sync", approx, false);
 
         double max_y_diff, max_angle_diff, min_depth, max_depth;
-        int max_size_diff;
+        int max_size_diff, max_num_key_points;
         private_nh.param("max_y_diff", max_y_diff, 2.0);
         private_nh.param("max_angle_diff", max_angle_diff, 2.0);
         private_nh.param("max_size_diff", max_size_diff, 2);
         private_nh.param("min_depth", min_depth, 0.2);
         private_nh.param("max_depth", max_depth, 5.0);
+        private_nh.param("max_num_key_points", max_num_key_points, 5000);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -83,6 +102,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         }
         else
         {
+            feature_extractor->setMaxNumKeyPoints(max_num_key_points);
             stereo_feature_extractor_.setFeatureExtractor(feature_extractor);
         }
         stereo_feature_extractor_.setCameraModel(stereo_camera_model_);
@@ -97,7 +117,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                   << " max_angle_diff = " << max_angle_diff
                   << " max_size_diff = " << max_size_diff
                   << " depth min/max = " << min_depth << "/" << max_depth
-                  << " feature_extractor = " << feature_extractor_name);
+                  << " feature_extractor = " << feature_extractor_name
+                  << " max_num_key_points = " << max_num_key_points);
         if (approx)
         {
             approximate_sync_.reset(
@@ -118,20 +139,15 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                                 this, _1, _2, _3, _4));
         }
 
-        // advertise the service
-        service_server_ = nh.advertiseService("set_region_of_interest", 
-                &StereoFeatureExtractorNodelet::setRegionOfInterestSrvCb, this);
-
-
         NODELET_INFO("Waiting for client subscriptions.");
     }
 
     // Handles (un)subscribing when clients (un)subscribe
     void connectCb()
     {
-        if (pub_features_.getNumSubscribers() == 0 && 
-            pub_debug_image_.getNumSubscribers() == 0 &&
-            pub_points_.getNumSubscribers() == 0)
+        if (pub_debug_image_.getNumSubscribers() == 0 &&
+            pub_feature_cloud_.getNumSubscribers() == 0 &&
+            pub_point_cloud_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
             sub_l_image_  .unsubscribe();
@@ -165,30 +181,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 cv::Rect(0, 0, l_image_msg->width, l_image_msg->height);
         }
            
-        vision_msgs::StereoFeaturesPtr features_msg =
-            extractFeatures(*l_image_msg, *r_image_msg,
-                            *l_info_msg, *r_info_msg);
-
-        if (features_msg.get() != NULL)
-        {
-            pub_features_.publish(features_msg);
-
-            if (pub_points_.getNumSubscribers() > 0)
-            {
-                sensor_msgs::PointCloud2Ptr point_cloud =
-                    boost::make_shared<sensor_msgs::PointCloud2>();
-                *point_cloud = features_msg->world_points;
-                pub_points_.publish(point_cloud);
-            }
-        }
-    }
-
-    vision_msgs::StereoFeaturesPtr extractFeatures(
-            const sensor_msgs::Image& l_image_msg,
-            const sensor_msgs::Image& r_image_msg,
-            const sensor_msgs::CameraInfo& l_info_msg,
-            const sensor_msgs::CameraInfo& r_info_msg)
-    {
         try
         {
             // bridge to opencv
@@ -199,7 +191,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv_ptr_right = cv_bridge::toCvCopy(r_image_msg, enc::BGR8);
             
             // Update the camera model
-            stereo_camera_model_->fromCameraInfo(l_info_msg, r_info_msg);
+            stereo_camera_model_->fromCameraInfo(*l_info_msg, *r_info_msg);
 
             cv::Mat left_image = cv_ptr_left->image;
             cv::Mat right_image = cv_ptr_right->image;
@@ -213,64 +205,29 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
             if (stereo_features.size() == 0)
             {
-                return vision_msgs::StereoFeaturesPtr();
+                return;
             }
 
-            // Fill in new features message
-            vision_msgs::StereoFeaturesPtr features_msg = 
-                boost::make_shared<vision_msgs::StereoFeatures>();
-            features_msg->header = l_image_msg.header;
-
-            // 3D points
-            sensor_msgs::PointCloud2& points_msg = features_msg->world_points;
-            points_msg.header = l_image_msg.header;
-
-            points_msg.height = stereo_features.size();
-            points_msg.width  = 1;
-            points_msg.fields.resize(4);
-            points_msg.fields[0].name = "x";
-            points_msg.fields[0].offset = 0;
-            points_msg.fields[0].count = 1;
-            points_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
-            points_msg.fields[1].name = "y";
-            points_msg.fields[1].offset = 4;
-            points_msg.fields[1].count = 1;
-            points_msg.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
-            points_msg.fields[2].name = "z";
-            points_msg.fields[2].offset = 8;
-            points_msg.fields[2].count = 1;
-            points_msg.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
-            points_msg.fields[3].name = "rgb";
-            points_msg.fields[3].offset = 12;
-            points_msg.fields[3].count = 1;
-            points_msg.fields[3].datatype = sensor_msgs::PointField::FLOAT32;
-            points_msg.point_step = 16;
-            points_msg.row_step = points_msg.point_step * points_msg.width;
-            points_msg.data.resize(points_msg.row_step * points_msg.height);
-            points_msg.is_dense = false; // there may be invalid points
-
-            features_msg->features.resize(stereo_features.size());
+            FeatureCloud::Ptr feature_cloud(new FeatureCloud());
+            feature_cloud->header = l_image_msg->header;
+            feature_cloud->points.resize(stereo_features.size());
+            PointCloud::Ptr point_cloud(new PointCloud());
+            point_cloud->header = l_image_msg->header;
+            point_cloud->points.resize(stereo_features.size());
             for (size_t i = 0; i < stereo_features.size(); ++i)
             {
-                // fill data of
-                // point cloud message
-                int offset = i * points_msg.point_step;
                 const cv::Point3d& point = stereo_features[i].world_point;
-                float x = point.x;
-                float y = point.y;
-                float z = point.z;
-                // pack data into point message data
-                memcpy(&points_msg.data[offset + 0], &x, sizeof(float));
-                memcpy(&points_msg.data[offset + 4], &y, sizeof(float));
-                memcpy(&points_msg.data[offset + 8], &z, sizeof(float));
+                pcl::PointXYZRGB& pcl_point = point_cloud->points[i];
+                pcl_point.x = point.x;
+                pcl_point.y = point.y;
+                pcl_point.z = point.z;
                 cv::Vec3b bgr = stereo_features[i].color;
                 int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
-                memcpy(&points_msg.data[offset + 12], &rgb_packed, sizeof(int32_t));
+                memcpy(&pcl_point.rgb, &rgb_packed, sizeof(int32_t));
 
-                // feature array
-                features_msg->features[i].x = stereo_features[i].key_point_left.pt.x;
-                features_msg->features[i].y = stereo_features[i].key_point_left.pt.y;
-                features_msg->features[i].descriptor = stereo_features[i].descriptor;
+                Feature& feature = feature_cloud->points[i];
+                std::vector<float> descriptor = stereo_features[i].descriptor;
+                std::copy(descriptor.begin(), descriptor.end(), feature.data);
             }
 
             if (pub_debug_image_.getNumSubscribers() > 0)
@@ -287,46 +244,27 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 pub_debug_image_.publish(cv_image.toImageMsg());
             }
 
-            return features_msg;
+            pub_point_cloud_.publish(point_cloud);
+            pub_feature_cloud_.publish(feature_cloud);
         }
         catch (cv_bridge::Exception& e)
         {
             NODELET_ERROR("cv_bridge exception: %s", e.what());
         }
-        // if anything went wrong, return empty msg
-        return vision_msgs::StereoFeaturesPtr();
     }
 
-    /**
-    * implementation of the service
-    */
-    bool setRegionOfInterestSrvCb(SetRegionOfInterest::Request& request,
-                         SetRegionOfInterest::Response& response)
+    void setRegionOfInterest(const sensor_msgs::RegionOfInterestConstPtr& roi_msg)
     {
-        if (request.x >= 0 && request.y >= 0)
-        {
-            region_of_interest_.x = request.x;
-            region_of_interest_.y = request.y;
-            region_of_interest_.width = request.width;
-            region_of_interest_.height = request.height;
-            ROS_INFO("Region of interest set to: (%i, %i), %ix%i due to service call",
-                    region_of_interest_.x,
-                    region_of_interest_.y,
-                    region_of_interest_.width,
-                    region_of_interest_.height);
-            stereo_feature_extractor_.setRegionOfInterest(region_of_interest_);
-            return true;
-        }
-        else
-        {
-            ROS_WARN("Invalid region of interest given (%i, %i, %ix%i), "
-                     "leaving ROI untouched.",
-                request.x,
-                request.y,
-                request.width,
-                request.height);
-            return false;
-        }
+        region_of_interest_.x = roi_msg->x_offset;
+        region_of_interest_.y = roi_msg->y_offset;
+        region_of_interest_.width = roi_msg->width;
+        region_of_interest_.height = roi_msg->height;
+        ROS_INFO("Region of interest set to: (%i, %i), %ix%i",
+                region_of_interest_.x,
+                region_of_interest_.y,
+                region_of_interest_.width,
+                region_of_interest_.height);
+        stereo_feature_extractor_.setRegionOfInterest(region_of_interest_);
     }
 
     boost::shared_ptr<image_transport::ImageTransport> it_;
@@ -343,26 +281,22 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     boost::shared_ptr<ApproximateSync> approximate_sync_;
     bool subscribed_; // stores if anyone is subscribed
 
+    ros::Subscriber sub_region_of_interest_;
+
     // Publications
-    ros::Publisher pub_features_;
+    ros::Publisher pub_point_cloud_;
+    ros::Publisher pub_feature_cloud_;
     ros::Publisher pub_debug_image_;
-    ros::Publisher pub_points_;
 
     // Processing state (note: only safe because we're single-threaded!)
     image_geometry::StereoCameraModel model_;
     cv::Mat_<cv::Vec3f> points_mat_; // scratch buffer
-
-    // Error reporting when input topics are not advertised
-    boost::shared_ptr<image_proc::AdvertisementChecker> check_inputs_;
 
     // the camera model
     StereoCameraModel::Ptr stereo_camera_model_;
 
     // the extractor
     StereoFeatureExtractor stereo_feature_extractor_;
-
-    // the srv
-    ros::ServiceServer service_server_;
 
     // the current roi
     cv::Rect region_of_interest_;
