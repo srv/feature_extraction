@@ -11,7 +11,6 @@
             <param name="max_angle_diff" value="2.0" />
             <param name="max_size_diff" value="1" />
             <param name="feature_extractor" value="SURF" />
-            <param name="visualize" value="true" />
         </node>
      </group>
 
