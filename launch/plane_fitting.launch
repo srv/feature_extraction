@@ -1,17 +1,6 @@
 <launch>
 
-    <node name="image_services_manager" pkg="nodelet" type="nodelet" args="manager" />
-
-    <include file="$(find fugu_configurations)/launch/camera_flex_narrow.launch" />
-    <include file="$(find fugu_configurations)/launch/nodelet_image_proc.launch">
-        <arg name="camera" value="forward_stereo_camera" />
-        <arg name="manager" value="/image_services_manager" />
-    </include>
-
-    <include file="$(find stereo_feature_extraction)/launch/stereo_feature_extractor.launch">
-        <arg name="camera" value="forward_stereo_camera" />
-        <arg name="manager" value="/image_services_manager" />
-    </include>
+    <include file="$(find stereo_feature_extraction)/launch/manager_camera_image_proc_extractor.launch" />
 
     <node name="image_view" pkg="image_view" type="image_view" output="screen">
         <remap from="image" to="forward_stereo_camera/stereo_features_debug_image" />

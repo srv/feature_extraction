@@ -3,7 +3,8 @@
     <!-- launch arguments -->
     <arg name="camera" />
 
-    <include file="$(find stereo_feature_extraction)/launch/image_services_manager.launch" />
+    <node pkg="nodelet" type="nodelet" name="image_services_manager" args="manager" />
+
     <group ns="$(arg camera)">
         <node pkg="nodelet" type="nodelet" name="stereo_feature_extractor"
             args="load stereo_feature_extraction/stereo_feature_extractor /image_services_manager"
