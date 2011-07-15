@@ -1,12 +1,12 @@
 <launch>
 
     <!-- launch arguments -->
+    <arg name="manager" />
     <arg name="camera" />
 
-    <include file="$(find stereo_feature_extraction)/launch/image_services_manager.launch" />
     <group ns="$(arg camera)">
         <node pkg="nodelet" type="nodelet" name="stereo_feature_extractor"
-            args="load stereo_feature_extraction/stereo_feature_extractor /image_services_manager"
+            args="load stereo_feature_extraction/stereo_feature_extractor $(arg manager)"
             output="screen">
             <param name="max_y_diff" value="1.0" />
             <param name="max_angle_diff" value="2.0" />
