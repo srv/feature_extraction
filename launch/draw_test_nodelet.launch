@@ -1,8 +1,6 @@
 <launch>
 
-    <include file="$(find stereo_feature_extraction)/launch/extractor_with_manager.launch" />
-
-    <node name="stereo_image_proc" type="stereo_image_proc" pkg="stereo_image_proc" ns="/forward_stereo_camera"/>
+    <include file="$(find stereo_feature_extraction)/launch/image_proc_extractor.launch" />
 
     <node name="player" pkg="rosbag" type="play" args="-l $(env ROS_BAGFILES_PATH)/keyboard_box_narrow_2011-05-26-15-28-33.bag" />
 

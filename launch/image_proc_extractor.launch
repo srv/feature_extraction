@@ -1,6 +1,5 @@
 <launch>
-    <node pkg="nodelet" type="nodelet" name="image_services_manager" 
-        args="manager" output="screen"/>
+    <include file="$(find stereo_feature_extraction)/launch/extractor_with_manager.launch" />
 
     <group ns="/forward_stereo_camera/">
         <group ns="left">
@@ -19,15 +18,6 @@
                 args="load image_proc/rectify /image_services_manager" 
                 output="screen"/>
         </group>
-
-        <node pkg="nodelet" type="nodelet" name="stereo_feature_extractor"
-            args="load stereo_feature_extraction/stereo_feature_extractor /image_services_manager"
-            output="screen">
-            <param name="max_y_diff" value="1.0" />
-            <param name="max_angle_diff" value="2.0" />
-            <param name="max_size_diff" value="1" />
-            <param name="feature_extractor" value="SURF" />
-            <param name="visualize" value="true" />
         </node>
      </group>
 
