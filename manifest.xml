@@ -18,7 +18,6 @@
   <depend package="camera_calibration_parsers" />
   <depend package="pluginlib" />
   <depend package="nodelet" />
-  <depend package="vision_msgs" />
   <depend package="pcl" />
   <depend package="pcl_ros" />
 
