@@ -32,6 +32,7 @@ int main(int argc, char** argv)
                 "maximum number of key points to extract")
         ("cloud_file,C", po::value<string>(), "file name for output point cloud")
         ("descriptor_file,D", po::value<string>(), "file name for output descriptors")
+        ("verbose,V", "vebose output")
         ("display", "display matching output (blocks while window is open)")
         ;
 
@@ -61,6 +62,8 @@ int main(int argc, char** argv)
     double max_depth = vm["max_depth"].as<double>();
     int max_num_key_points = vm["max_num_key_points"].as<int>();
 
+    bool verbose = vm.count("verbose") > 0;
+
     // create instances
     FeatureExtractor::Ptr feature_extractor = 
         FeatureExtractorFactory::create(feature_extractor_name);
@@ -87,13 +90,13 @@ int main(int argc, char** argv)
     extractor.setMinDepth(min_depth);
     extractor.setMaxDepth(max_depth);
 
-    std::cout << "Running extractor..." << std::flush;
+    if (verbose) std::cout << "Running extractor..." << std::flush;
     cv::Mat image_left = cv::imread(left_image_file);
     cv::Mat image_right = cv::imread(right_image_file);
 
     StereoFeatureSet stereo_feature_set = 
         extractor.extract(image_left, image_right);
-    std::cout << "found " << stereo_feature_set.stereo_features.size() 
+    if (verbose) std::cout << "found " << stereo_feature_set.stereo_features.size() 
         << " stereo features." << std::endl;
 
     if (vm.count("display"))
@@ -112,7 +115,7 @@ int main(int argc, char** argv)
         std::string file_name = vm["cloud_file"].as<std::string>();
         if (stereo_feature_set.savePointCloud(file_name))
         {
-            std::cout << "Written point cloud to file '" << file_name << "'." 
+            if (verbose) std::cout << "Written point cloud to file '" << file_name << "'." 
                 << std::endl;
         }
         else
@@ -126,7 +129,7 @@ int main(int argc, char** argv)
         std::string file_name = vm["descriptor_file"].as<std::string>();
         if (stereo_feature_set.saveFeatureCloud(file_name))
         {
-            std::cout << "Written descriptors to file '" << file_name << "'." 
+            if (verbose) std::cout << "Written descriptors to file '" << file_name << "'." 
                  << std::endl;
         }
         else
