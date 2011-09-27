@@ -1,4 +1,3 @@
-#include <pluginlib/class_list_macros.h>
 #include <nodelet/nodelet.h>
 #include <ros/ros.h>
 
@@ -302,8 +301,11 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
  
 };
 
+} // end of namespace
+
+
+#include <pluginlib/class_list_macros.h>
 PLUGINLIB_DECLARE_CLASS(stereo_feature_extraction, 
     stereo_feature_extractor, 
     stereo_feature_extraction::StereoFeatureExtractorNodelet, nodelet::Nodelet);
-}
 
