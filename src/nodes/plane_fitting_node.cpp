@@ -60,14 +60,14 @@ class PlaneFittingNode
             return;
         }
 
-        std::cout << "plane model inliers: " << inliers.indices.size () << std::endl;
+        ROS_INFO_STREAM("plane model inliers: " << inliers.indices.size());
         double a = coefficients.values[0];
         double b = coefficients.values[1];
         double c = coefficients.values[2];
         double d = coefficients.values[3];
 
-        std::cout << "fitted plane coefficients: " << a << " " << b << " " 
-            << c << " " << d << std::endl;
+        ROS_INFO_STREAM("fitted plane coefficients: " << a << " " << b << " " 
+            << c << " " << d << " (angle to z axis: " << acos(c) / M_PI * 180.0  << ")");
 
         std::vector<double> distances(inliers.indices.size());
         for (size_t i = 0; i < inliers.indices.size(); ++i)
@@ -90,11 +90,9 @@ class PlaneFittingNode
             m2 += delta * (distances[i] - mean_distance);
         }
         double variance = m2 / (distances.size() - 1);
-        std::cout << "distances from fitted plane: mean = " << mean_distance
+        ROS_INFO_STREAM("distances from fitted plane: mean = " << mean_distance
             << " stddev = " << sqrt(variance) << " min = " << min_distance 
-            << " max = " << max_distance << std::endl;
-
-        cv::Mat canvas;
+            << " max = " << max_distance);
     }
  
 };
