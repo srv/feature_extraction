@@ -8,6 +8,7 @@ set(SOURCES
     Surf.cpp
     drawing.cpp
     stereo_feature_set.cpp
-    ../nodelets/stereo_feature_extractor_nodelet.cpp)
+    ../nodelets/stereo_feature_extractor_nodelet.cpp
+    ../nodelets/feature_extractor_nodelet.cpp)
 include_directories(../../include/stereo_feature_extraction)
 rosbuild_add_library(${PROJECT_NAME} ${SOURCES})
