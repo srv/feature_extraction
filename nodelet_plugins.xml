@@ -1,0 +1,11 @@
+<library path="lib/libfeature_extraction_ros">
+
+  <class name="feature_extraction/FeatureExtractor" 
+         type="feature_extraction_ros::FeatureExtractorNodelet"
+         base_class_type="nodelet::Nodelet">
+    <description>
+        Nodelet for feature extraction
+    </description>
+  </class>
+
+</library>

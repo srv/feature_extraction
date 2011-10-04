@@ -9,6 +9,17 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/feature_extraction</url>
 
+  <depend package="pcl" />
+  <depend package="pcl_ros" />
+  <depend package="opencv2" />
+  <depend package="nodelet" />
+  <depend package="image_transport" />
+  <depend package="cv_bridge" />
+
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
+
 </package>
 
 
