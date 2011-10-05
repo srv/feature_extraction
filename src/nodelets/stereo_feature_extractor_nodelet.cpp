@@ -68,9 +68,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1,
                 connect_cb, connect_cb);
 
-        pub_debug_image_ = nh.advertise<sensor_msgs::Image>("stereo_features_debug_image", 1,
-                connect_cb, connect_cb);
-
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &StereoFeatureExtractorNodelet::setRegionOfInterest, this);
 
         // Synchronize inputs. Topic subscriptions happen on demand in the 
@@ -88,6 +85,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("min_depth", min_depth, 0.2);
         private_nh.param("max_depth", max_depth, 5.0);
         private_nh.param("max_num_key_points", max_num_key_points, 5000);
+
+        private_nh.param("show_image", show_image_, false);
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
@@ -144,8 +143,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // Handles (un)subscribing when clients (un)subscribe
     void connectCb()
     {
-        if (pub_debug_image_.getNumSubscribers() == 0 &&
-            pub_feature_cloud_.getNumSubscribers() == 0 &&
+        if (pub_feature_cloud_.getNumSubscribers() == 0 &&
             pub_point_cloud_.getNumSubscribers() == 0)
         {
             NODELET_INFO("No more clients connected, unsubscribing from camera.");
@@ -229,18 +227,15 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                 std::copy(descriptor.begin(), descriptor.end(), feature.data);
             }
 
-            if (pub_debug_image_.getNumSubscribers() > 0)
+            if (show_image_)
             {
                 cv::Mat canvas;
                 drawStereoFeatures(canvas, cv_ptr_left->image, 
                                     cv_ptr_right->image, stereo_features);
                 cv::rectangle(canvas, region_of_interest_.tl(),
                         region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
-                cv_bridge::CvImage cv_image;
-                cv_image.header = cv_ptr_left->header;
-                cv_image.encoding = cv_ptr_left->encoding;
-                cv_image.image = canvas;
-                pub_debug_image_.publish(cv_image.toImageMsg());
+                cv::imshow("Stereo Features", canvas);
+                cv::waitKey(5);
             }
 
             pub_point_cloud_.publish(point_cloud);
@@ -285,7 +280,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     // Publications
     ros::Publisher pub_point_cloud_;
     ros::Publisher pub_feature_cloud_;
-    ros::Publisher pub_debug_image_;
 
     // Processing state (note: only safe because we're single-threaded!)
     image_geometry::StereoCameraModel model_;
@@ -299,6 +293,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
     // the current roi
     cv::Rect region_of_interest_;
+
+    // show debug image
+    bool show_image_;
  
 };
 
