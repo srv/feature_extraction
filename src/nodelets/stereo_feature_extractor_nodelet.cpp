@@ -25,7 +25,7 @@
 #include "stereo_feature_extraction/stereo_feature_extractor.h"
 #include "stereo_feature_extraction/drawing.h"
 
-namespace stereo_feature_extraction
+namespace stereo_feature_extraction_ros
 {
 
 struct Feature
@@ -35,17 +35,17 @@ struct Feature
 } EIGEN_ALIGN16;
 }
 
-POINT_CLOUD_REGISTER_POINT_STRUCT (stereo_feature_extraction::Feature,
+POINT_CLOUD_REGISTER_POINT_STRUCT (stereo_feature_extraction_ros::Feature,
                                 (float[64], data, data)
                                 )
 
-namespace stereo_feature_extraction
+namespace stereo_feature_extraction_ros
 {
 class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 {
   public:
     StereoFeatureExtractorNodelet() :
-        stereo_camera_model_(new StereoCameraModel())
+        stereo_camera_model_(new stereo_feature_extraction::StereoCameraModel())
     { }
 
     typedef pcl::PointCloud<Feature> FeatureCloud;
@@ -54,9 +54,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
   private:
     virtual void onInit()
     {
-        ros::NodeHandle nh = getNodeHandle();
+        ros::NodeHandle nh = ros::NodeHandle(getNodeHandle(), "stereo_feature_extractor");
         ros::NodeHandle& private_nh = getPrivateNodeHandle();
-        it_.reset(new image_transport::ImageTransport(nh));
+        it_.reset(new image_transport::ImageTransport(ros::NodeHandle(getNodeHandle(), "stereo")));
         subscribed_ = false; // no subscription yet
         
         ros::SubscriberStatusCallback connect_cb = 
@@ -158,7 +158,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         else if (!subscribed_)
         {
             NODELET_INFO("Client connected, subscribing to camera.");
-            ros::NodeHandle &nh = getNodeHandle();
+            ros::NodeHandle nh = ros::NodeHandle(getNodeHandle(), "stereo");
             // Queue size 1 should be OK; the one that matters is the synchronizer queue size.
             sub_l_image_  .subscribe(*it_, "left/image_rect", 1);
             sub_r_image_  .subscribe(*it_, "right/image_rect", 1);
@@ -196,9 +196,9 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
             cv::Mat right_image = cv_ptr_right->image;
 
             // Calculate stereo features
-            StereoFeatureSet stereo_feature_set = 
+            stereo_feature_extraction::StereoFeatureSet stereo_feature_set = 
                 stereo_feature_extractor_.extract(left_image, right_image);
-            std::vector<StereoFeature>& stereo_features = 
+            std::vector<stereo_feature_extraction::StereoFeature>& stereo_features = 
                 stereo_feature_set.stereo_features;
 
             NODELET_INFO("%zu stereo features extracted.", stereo_features.size());
@@ -292,10 +292,10 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
     cv::Mat_<cv::Vec3f> points_mat_; // scratch buffer
 
     // the camera model
-    StereoCameraModel::Ptr stereo_camera_model_;
+    stereo_feature_extraction::StereoCameraModel::Ptr stereo_camera_model_;
 
     // the extractor
-    StereoFeatureExtractor stereo_feature_extractor_;
+    stereo_feature_extraction::StereoFeatureExtractor stereo_feature_extractor_;
 
     // the current roi
     cv::Rect region_of_interest_;
@@ -307,6 +307,6 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_DECLARE_CLASS(stereo_feature_extraction, 
-    stereo_feature_extractor, 
-    stereo_feature_extraction::StereoFeatureExtractorNodelet, nodelet::Nodelet);
+    StereoFeatureExtractor, 
+    stereo_feature_extraction_ros::StereoFeatureExtractorNodelet, nodelet::Nodelet);
 

@@ -1,0 +1,12 @@
+queue_size: 5
+approximate_sync: false
+
+max_y_diff: 2.0
+max_angle_diff: 2.0
+max_size_diff: 2
+min_depth: 0.2
+max_depth: 10.0
+max_num_key_points: 5000
+
+feature_extractor: "SURF"
+

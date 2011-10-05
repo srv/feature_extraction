@@ -1,5 +1,5 @@
 <library path="lib/libstereo_feature_extraction_ros">
-  <class name="stereo_feature_extraction/stereo_feature_extractor" 
+  <class name="stereo_feature_extraction/StereoFeatureExtractor" 
          type="stereo_feature_extraction_ros::StereoFeatureExtractorNodelet" 
          base_class_type="nodelet::Nodelet">
     <description>
