@@ -1,27 +1,12 @@
 #include <opencv2/core/core.hpp>
 
-#include "drawing.h"
-#include "stereo_feature.h"
+#include <feature_extraction/drawing.h>
+
+#include "stereo_feature_extraction/drawing.h"
+#include "stereo_feature_extraction/stereo_feature.h"
 
 namespace stereo_feature_extraction
 {
-
-    void drawKeyPoint(cv::Mat& image, const KeyPoint& key_point)
-    {
-        cv::Point center(cvRound(key_point.pt.x), 
-                        cvRound(key_point.pt.y));
-        int radius = cvRound(key_point.size);
-        cv::circle(image, center, radius, cv::Scalar(0, 255, 0), 2);
-    }
-
-    void drawKeyPoints(cv::Mat& image, const std::vector<KeyPoint>& key_points)
-    {
-        for (size_t i = 0; i < key_points.size(); ++i)
-        {
-            drawKeyPoint(image, key_points[i]);
-        }
-    }
-
     void drawStereoFeatures(cv::Mat& canvas, const cv::Mat& left_image,
             const cv::Mat& right_image,
             const std::vector<StereoFeature>& stereo_features)
@@ -42,8 +27,8 @@ namespace stereo_feature_extraction
         // paint stereo features
         for (size_t i = 0; i < stereo_features.size(); ++i)
         {
-            drawKeyPoint(left_canvas_hdr, stereo_features[i].key_point_left);
-            drawKeyPoint(right_canvas_hdr, stereo_features[i].key_point_right);
+            feature_extraction::drawKeyPoint(left_canvas_hdr, stereo_features[i].key_point_left);
+            feature_extraction::drawKeyPoint(right_canvas_hdr, stereo_features[i].key_point_right);
             cv::Point p1 = stereo_features[i].key_point_left.pt;
             cv::Point p2 = stereo_features[i].key_point_right.pt;
             p2.x += left_image.cols;

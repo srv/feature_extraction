@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iomanip>
 
-#include "stereo_feature_set.h"
+#include "stereo_feature_extraction/stereo_feature_set.h"
 
 
 std::ostream& operator<<(std::ostream& ostream,
@@ -52,7 +52,7 @@ bool StereoFeatureSet::savePointCloud(const std::string& file_name)
         out << stereo_features[i].world_point.x << " ";
         out << stereo_features[i].world_point.y << " ";
         out << stereo_features[i].world_point.z << " ";
-        out << setprecision(20) << packRgb_(stereo_features[i].color) << std::endl;
+        out << std::setprecision(20) << packRgb_(stereo_features[i].color) << std::endl;
     }
     out.close();
     return true;

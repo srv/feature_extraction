@@ -1,11 +1,14 @@
 #include <iostream>
 
 #include <opencv2/highgui/highgui.hpp>
-#include "stereo_feature_extractor.h"
-#include "feature_extractor_factory.h"
+#include <feature_extraction/feature_extractor_factory.h>
+
+#include "stereo_feature_extraction/stereo_feature_extractor.h"
 
 using namespace stereo_feature_extraction;
 
+using feature_extraction::KeyPoint;
+using feature_extraction::FeatureExtractor;
 
 static const double DEFAULT_MAX_Y_DIFF = 0.5;
 static const double DEFAULT_MAX_ANGLE_DIFF = 5.0;

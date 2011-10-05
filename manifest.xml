@@ -20,6 +20,7 @@
   <depend package="nodelet" />
   <depend package="pcl" />
   <depend package="pcl_ros" />
+  <depend package="feature_extraction" />
 
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />

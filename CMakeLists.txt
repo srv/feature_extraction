@@ -21,6 +21,24 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
+rosbuild_add_library(${PROJECT_NAME}
+    src/stereo_feature_extraction/stereo_feature_extractor.cpp
+    src/stereo_feature_extraction/stereo_camera_model.cpp
+    src/stereo_feature_extraction/stereo_feature.cpp
+    src/stereo_feature_extraction/drawing.cpp
+    src/stereo_feature_extraction/stereo_feature_set.cpp
+    )
+
+rosbuild_add_library(${PROJECT_NAME}_ros
+    src/nodelets/stereo_feature_extractor_nodelet.cpp
+    )
+
+target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
+
+rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+rosbuild_add_gtest(stereo_feature_extractor_test test/stereo_feature_extractor_test.cpp)
+target_link_libraries(stereo_feature_extractor_test ${PROJECT_NAME})
+ 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)
@@ -29,5 +47,3 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
-add_subdirectory(src)
-add_subdirectory(test)

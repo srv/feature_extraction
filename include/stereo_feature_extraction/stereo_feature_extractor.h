@@ -3,8 +3,9 @@
 
 #include <opencv2/features2d/features2d.hpp>
 
+#include <feature_extraction/feature_extractor.h>
+
 #include "stereo_feature_set.h"
-#include "feature_extractor.h"
 #include "stereo_camera_model.h"
 
 namespace stereo_feature_extraction
@@ -38,7 +39,7 @@ class StereoFeatureExtractor
     /**
     * \param feature_extractor new feature extractor to use
     */
-    void setFeatureExtractor(const FeatureExtractor::Ptr& feature_extractor);
+    void setFeatureExtractor(const feature_extraction::FeatureExtractor::Ptr& feature_extractor);
 
     /**
     * \param model new camera model
@@ -124,8 +125,8 @@ class StereoFeatureExtractor
     *
     */
     static void computeMatchMask(
-            const std::vector<KeyPoint>& key_points_left,
-            const std::vector<KeyPoint>& key_points_right,
+            const std::vector<feature_extraction::KeyPoint>& key_points_left,
+            const std::vector<feature_extraction::KeyPoint>& key_points_right,
             cv::Mat& match_mask, double max_y_diff,
             double max_angle_diff, int max_size_diff,
             double min_disparity, double max_disparity);
@@ -209,7 +210,7 @@ class StereoFeatureExtractor
         const cv::Point2f& point_left, const cv::Mat& image_right, 
         double* distance) const;
 
-    FeatureExtractor::Ptr feature_extractor_;
+    feature_extraction::FeatureExtractor::Ptr feature_extractor_;
     StereoCameraModel::Ptr stereo_camera_model_;
 
     MatchMethod match_method_;

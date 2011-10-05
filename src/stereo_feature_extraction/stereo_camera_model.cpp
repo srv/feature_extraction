@@ -1,8 +1,8 @@
 
-#include "stereo_camera_model.h"
-#include "camera_calibration_parsers/parse.h"
+#include <camera_calibration_parsers/parse.h>
+#include <sensor_msgs/CameraInfo.h>
 
-#include "sensor_msgs/CameraInfo.h"
+#include "stereo_feature_extraction/stereo_camera_model.h"
 
 using namespace stereo_feature_extraction;
 

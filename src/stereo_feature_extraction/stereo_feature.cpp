@@ -1,4 +1,4 @@
-#include "stereo_feature.h"
+#include "stereo_feature_extraction/stereo_feature.h"
 
 std::ostream& operator<<(std::ostream& ostream,
         const stereo_feature_extraction::StereoFeature& feature)

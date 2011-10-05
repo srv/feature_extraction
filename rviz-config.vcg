@@ -1,7 +1,7 @@
 Background\ ColorR=0
 Background\ ColorG=0
 Background\ ColorB=0
-Fixed\ Frame=/stereo_camera
+Fixed\ Frame=/forward_stereo_camera
 Target\ Frame=<Fixed Frame>
 Axes.Enabled=1
 Axes.Length=0,5
@@ -50,7 +50,7 @@ Grid.Plane\ Cell\ Count=10
 Grid.Reference\ Frame=<Fixed Frame>
 Stereo\ Features\ Debug\ Image.Alpha=1
 Stereo\ Features\ Debug\ Image.Enabled=1
-Stereo\ Features\ Debug\ Image.Image\ Topic=/forward_stereo_camera/debug_image
+Stereo\ Features\ Debug\ Image.Image\ Topic=/forward_stereo_camera/stereo_features_debug_image
 Stereo\ Features\ Debug\ Image.Transport\ Hint=raw
 Stereo\ Features.Alpha=1
 Stereo\ Features.Billboard\ Size=0,03
@@ -60,7 +60,7 @@ Stereo\ Features.Enabled=1
 Stereo\ Features.Position\ Transformer=XYZ
 Stereo\ Features.Selectable=0
 Stereo\ Features.Style=2
-Stereo\ Features.Topic=/forward_stereo_camera/stereo_features
+Stereo\ Features.Topic=/forward_stereo_camera/point_cloud
 Stereo\ Features..AxisAutocompute\ Value\ Bounds=0
 Stereo\ Features..AxisAxis=2
 Stereo\ Features..AxisMax\ Value=1,5
@@ -81,8 +81,8 @@ Stereo\ Features..IntensityMin\ Intensity=0
 Tool\ 2D\ Nav\ GoalTopic=goal
 Tool\ 2D\ Pose\ EstimateTopic=initialpose
 Camera\ Type=rviz::OrbitViewController
-Camera\ Config=1.42559 4.75584 6.88165 0 0 0
-Property\ Grid\ State=selection=Stereo Features Debug Image.Enabled;expanded=.Global Options,Grid.Enabled,Axes.Enabled,Stereo Features Debug Image.Enabled,Disparity Cloud.Enabled.Disparity Cloud.StatusTopStatus,Stereo Features.Enabled;scrollpos=0,8;splitterpos=204,411;ispageselected=1
+Camera\ Config=1.08059 6.26584 9.70724 0 0 0
+Property\ Grid\ State=selection=Fixed Frame;expanded=.Global Options,Grid.Enabled,Axes.Enabled,Stereo Features Debug Image.Enabled,Disparity Cloud.Enabled.Disparity Cloud.StatusTopStatus,Stereo Features.Enabled;scrollpos=0,0;splitterpos=204,412;ispageselected=1
 [Display0]
 Name=Grid
 Package=rviz

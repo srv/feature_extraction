@@ -19,10 +19,11 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
-#include "stereo_camera_model.h"
-#include "stereo_feature_extractor.h"
-#include "feature_extractor_factory.h"
-#include "drawing.h"
+#include <feature_extraction/feature_extractor_factory.h>
+
+#include "stereo_feature_extraction/stereo_camera_model.h"
+#include "stereo_feature_extraction/stereo_feature_extractor.h"
+#include "stereo_feature_extraction/drawing.h"
 
 namespace stereo_feature_extraction
 {
@@ -91,8 +92,8 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
                 std::string("SURF"));
-        FeatureExtractor::Ptr feature_extractor = 
-            FeatureExtractorFactory::create(feature_extractor_name);
+        feature_extraction::FeatureExtractor::Ptr feature_extractor = 
+            feature_extraction::FeatureExtractorFactory::create(feature_extractor_name);
         if (feature_extractor.get() == NULL)
         {
             NODELET_FATAL("Cannot create feature extractor with name %s",

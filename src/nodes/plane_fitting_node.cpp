@@ -8,12 +8,6 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_ros/point_cloud.h>
 
-#include "stereo_feature_extractor.h"
-#include "feature_extractor_factory.h"
-#include "drawing.h"
-
-using namespace stereo_feature_extraction;
-
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
 
 class PlaneFittingNode
@@ -79,7 +73,7 @@ class PlaneFittingNode
         // http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         double m2 = 0; // helper for floating variance computation
         double mean_distance = 0;
-        double min_distance = numeric_limits<double>::max();
+        double min_distance = std::numeric_limits<double>::max();
         double max_distance = 0;
         for (size_t i = 0; i < distances.size(); ++i)
         {

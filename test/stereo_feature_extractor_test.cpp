@@ -10,14 +10,17 @@
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
-#include "stereo_feature_extractor.h"
-#include "feature_extractor_factory.h"
-#include "drawing.h"
-#include "sensor_msgs/CameraInfo.h"
-#include "image_geometry/stereo_camera_model.h"
+#include <sensor_msgs/CameraInfo.h>
+#include <image_geometry/stereo_camera_model.h>
 
+#include <feature_extraction/feature_extractor_factory.h>
+
+#include "stereo_feature_extraction/stereo_feature_extractor.h"
+#include "stereo_feature_extraction/drawing.h"
 
 using namespace stereo_feature_extraction;
+using feature_extraction::FeatureExtractor;
+using feature_extraction::FeatureExtractorFactory;
 
 StereoFeatureExtractor createStandardExtractor()
 {
@@ -197,7 +200,7 @@ TEST(StereoFeatureExtractor, depthResolutionTest)
             << c << " " << d << std::endl;
 
         // check if the computed plane has the right distance and normal vector
-        EXPECT_NEAR(-d, k/100.0, 0.05);
+        EXPECT_NEAR(fabs(d), k/100.0, 0.05);
         EXPECT_NEAR(a, 0.0, 0.1);
         EXPECT_NEAR(b, 0.0, 0.1);
         EXPECT_NEAR(std::abs(c), 1.0, 0.1);
@@ -212,7 +215,7 @@ TEST(StereoFeatureExtractor, depthResolutionTest)
         // http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
         double m2 = 0; // helper for floating variance computation
         double mean_distance = 0;
-        double min_distance = numeric_limits<double>::max();
+        double min_distance = std::numeric_limits<double>::max();
         double max_distance = 0;
         for (size_t i = 0; i < distances.size(); ++i)
         {

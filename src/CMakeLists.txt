@@ -1,3 +1,0 @@
-add_subdirectory(stereo_feature_extraction)
-add_subdirectory(nodes)
-add_subdirectory(tools)
