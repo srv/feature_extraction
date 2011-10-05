@@ -1,14 +1,16 @@
 #include <boost/program_options.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include "stereo_feature_extractor.h"
-#include "feature_extractor_factory.h"
-#include "drawing.h"
+#include <sensor_msgs/CameraInfo.h>
+#include <image_geometry/stereo_camera_model.h>
+#include <feature_extraction/feature_extractor_factory.h>
 
-#include "sensor_msgs/CameraInfo.h"
-#include "image_geometry/stereo_camera_model.h"
+#include "stereo_feature_extraction/stereo_feature_extractor.h"
+#include "stereo_feature_extraction/drawing.h"
+
 
 using namespace stereo_feature_extraction;
+using namespace feature_extraction;
 namespace po = boost::program_options;
 
 int main(int argc, char** argv)
@@ -16,22 +18,22 @@ int main(int argc, char** argv)
     // Declare the supported options.
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("ileft,L", po::value<string>()->required(), "left image file")
-        ("iright,R", po::value<string>()->required(), "right image file")
-        ("cleft,J", po::value<string>()->required(), 
+        ("ileft,L", po::value<std::string>()->required(), "left image file")
+        ("iright,R", po::value<std::string>()->required(), "right image file")
+        ("cleft,J", po::value<std::string>()->required(), 
                 "calibration file of left camera")
-        ("cright,K", po::value<string>()->required(), 
+        ("cright,K", po::value<std::string>()->required(), 
                 "calibration file of right camera")
         ("max_y_diff,Y", po::value<double>()->default_value(2.0), "maximum y difference for matching keypoints")
         ("max_angle_diff,A", po::value<double>()->default_value(4.0), "maximum angle difference for matching keypoints")
         ("max_size_diff,S", po::value<int>()->default_value(5), "maximum size difference for matching keypoints")
-        ("feature_extractor,E", po::value<string>()->default_value("SURF"), "feature extractor")
+        ("feature_extractor,E", po::value<std::string>()->default_value("SURF"), "feature extractor")
         ("min_depth,N", po::value<double>()->default_value(0.0), "minimum depth")
         ("max_depth,F", po::value<double>()->default_value(100.0), "maximum depth")
         ("max_num_key_points,M", po::value<int>()->default_value(5000), 
                 "maximum number of key points to extract")
-        ("cloud_file,C", po::value<string>(), "file name for output point cloud")
-        ("descriptor_file,D", po::value<string>(), "file name for output descriptors")
+        ("cloud_file,C", po::value<std::string>(), "file name for output point cloud")
+        ("descriptor_file,D", po::value<std::string>(), "file name for output descriptors")
         ("verbose,V", "vebose output")
         ("display", "display matching output (blocks while window is open)")
         ;

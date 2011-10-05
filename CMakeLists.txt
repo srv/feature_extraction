@@ -36,6 +36,8 @@ rosbuild_add_library(${PROJECT_NAME}_ros
 target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
 
 rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+rosbuild_add_executable(extractor src/tools/extractor.cpp)
+target_link_libraries(extractor ${PROJECT_NAME})
 rosbuild_add_gtest(stereo_feature_extractor_test test/stereo_feature_extractor_test.cpp)
 target_link_libraries(stereo_feature_extractor_test ${PROJECT_NAME})
  
