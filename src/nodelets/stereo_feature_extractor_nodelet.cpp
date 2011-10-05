@@ -234,6 +234,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
                                     cv_ptr_right->image, stereo_features);
                 cv::rectangle(canvas, region_of_interest_.tl(),
                         region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
+                cv::namedWindow("Stereo Features", 0);
                 cv::imshow("Stereo Features", canvas);
                 cv::waitKey(5);
             }

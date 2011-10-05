@@ -1,7 +1,7 @@
 <launch>
   <arg name="manager" default="stereo_feature_extractor_manager" />
   <arg name="standalone" default="false" />
-  <arg name="show_image" defalut="false" />
+  <arg name="show_image" default="false" />
   <arg name="stereo" />
 
   <node if="$(arg standalone)" name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager" output="screen" />
