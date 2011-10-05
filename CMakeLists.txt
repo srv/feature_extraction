@@ -42,3 +42,5 @@ target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
 #rosbuild_add_executable(example examples/example.cpp)
 #target_link_libraries(example ${PROJECT_NAME})
 
+rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
+target_link_libraries(feature_extractors_test ${PROJECT_NAME})

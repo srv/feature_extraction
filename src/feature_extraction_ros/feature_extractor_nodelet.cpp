@@ -12,6 +12,8 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
+#include <vision_msgs/Features.h>
+
 #include "feature_extraction/feature_extractor_factory.h"
 #include "feature_extraction/drawing.h"
 
@@ -46,15 +48,16 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
   private:
     virtual void onInit()
     {
-        ros::NodeHandle nh = getNodeHandle();
+        ros::NodeHandle nh = ros::NodeHandle(getNodeHandle(), "feature_extractor");
         ros::NodeHandle& private_nh = getPrivateNodeHandle();
 
-        image_transport::ImageTransport it(nh);
+        image_transport::ImageTransport it(getNodeHandle());
         // TODO subscribe / unsubscribe on demand?
         sub_image_ = it.subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
         
         pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1);
+        pub_features_ = nh.advertise<vision_msgs::Features>("features", 1);
 
         private_nh.param("show_image", show_image_, false);
         int max_num_key_points;
@@ -126,6 +129,29 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
               pub_feature_cloud_.publish(feature_cloud);
             }
 
+            if (pub_features_.getNumSubscribers() > 0)
+            {
+              vision_msgs::Features::Ptr features_msg(new vision_msgs::Features());
+              features_msg->header = image_msg->header;
+              features_msg->key_points.resize(key_points.size());
+              for (size_t i = 0; i < key_points.size(); ++i)
+              {
+                features_msg->key_points[i].x = key_points[i].pt.x;
+                features_msg->key_points[i].y = key_points[i].pt.y;
+                features_msg->key_points[i].size = key_points[i].size;
+                features_msg->key_points[i].angle = key_points[i].angle;
+                features_msg->key_points[i].response = key_points[i].response;
+                features_msg->key_points[i].octave = key_points[i].octave;
+              }
+              features_msg->descriptor_length = descriptors.cols;
+              assert(descriptors.isContinuous());
+              assert(descriptors.depth() == CV_32F);
+              assert(descriptors.channels() == 1);
+              features_msg->descriptor_data.insert(features_msg->descriptor_data.begin(), descriptors.data,
+                  descriptors.data + descriptors.cols * descriptors.rows);
+              pub_features_.publish(features_msg);
+            }
+
             if (show_image_)
             {
                 cv::Mat canvas = image.clone();
@@ -160,6 +186,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
 
     // Publications
     ros::Publisher pub_feature_cloud_;
+    ros::Publisher pub_features_;
 
     // the extractor
     feature_extraction::FeatureExtractor::Ptr feature_extractor_;

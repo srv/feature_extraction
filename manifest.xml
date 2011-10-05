@@ -15,8 +15,10 @@
   <depend package="nodelet" />
   <depend package="image_transport" />
   <depend package="cv_bridge" />
+  <depend package="vision_msgs" />
 
   <export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfeature_extraction" />
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>
 
