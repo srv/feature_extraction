@@ -158,6 +158,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                 drawKeyPoints(canvas, key_points);
                 cv::rectangle(canvas, region_of_interest_.tl(),
                         region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
+                cv::namedWindow("Feature Extraction", 0);
                 cv::imshow("Feature Extraction", canvas);
                 cv::waitKey(5);
             }
