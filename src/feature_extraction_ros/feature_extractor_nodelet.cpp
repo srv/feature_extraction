@@ -50,10 +50,11 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
     {
         ros::NodeHandle nh = ros::NodeHandle(getNodeHandle(), "feature_extractor");
         ros::NodeHandle& private_nh = getPrivateNodeHandle();
+        
+        it_.reset(new image_transport::ImageTransport(getNodeHandle()));
 
-        image_transport::ImageTransport it(getNodeHandle());
         // TODO subscribe / unsubscribe on demand?
-        sub_image_ = it.subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
+        sub_image_ = it_->subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
         
         pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1);
@@ -183,6 +184,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
     }
 
     ros::Subscriber sub_region_of_interest_;
+    boost::shared_ptr<image_transport::ImageTransport> it_;
     image_transport::Subscriber sub_image_;
 
     // Publications
