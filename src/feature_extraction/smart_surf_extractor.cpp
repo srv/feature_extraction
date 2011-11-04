@@ -1,6 +1,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "feature_extraction/surf_extractor.h"
+#include "feature_extraction/smart_surf_extractor.h"
 
 using namespace feature_extraction;
 
@@ -8,17 +8,17 @@ static const int OCTAVES = 5;
 static const int INIT_STEP = 2;
 static const int THRESHOLD_RESPONSE = 26;
 
-bool keyPointSort(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2)
+bool _keyPointSort(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2)
 {
     return kp1.response > kp2.response;
 }
 
-SurfExtractor::SurfExtractor() : FeatureExtractor(), 
+SmartSurfExtractor::SmartSurfExtractor() : FeatureExtractor(), 
     surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE)
 {
 }
 
-void SurfExtractor::extract(const cv::Mat& image,
+void SmartSurfExtractor::extract(const cv::Mat& image,
         std::vector<KeyPoint>& key_points,
         cv::Mat& descriptors, const cv::Rect& roi)
 {
@@ -55,7 +55,7 @@ void SurfExtractor::extract(const cv::Mat& image,
     {
         std::partial_sort(cv_key_points.begin(), 
                 cv_key_points.begin() + max_num_key_points_, 
-                cv_key_points.end(), keyPointSort);
+                cv_key_points.end(), _keyPointSort);
         cv_key_points.resize(max_num_key_points_);
     }
     surf_.compute(cv_key_points, descriptors);

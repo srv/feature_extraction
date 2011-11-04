@@ -25,8 +25,8 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/cv_surf_extractor.cpp
     src/feature_extraction/drawing.cpp
     src/feature_extraction/feature_extractor_factory.cpp
-    src/feature_extraction/surf.cpp
-    src/feature_extraction/surf_extractor.cpp
+    src/feature_extraction/smart_surf.cpp
+    src/feature_extraction/smart_surf_extractor.cpp
     )
 
 rosbuild_add_library(${PROJECT_NAME}_ros

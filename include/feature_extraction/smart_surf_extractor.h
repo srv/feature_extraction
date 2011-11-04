@@ -1,26 +1,26 @@
-#ifndef SURF_EXTRACTOR_H
-#define SURF_EXTRACTOR_H
+#ifndef SMART_SURF_EXTRACTOR_H
+#define SMART_SURF_EXTRACTOR_H
 
 #include <opencv2/features2d/features2d.hpp>
 #include "feature_extractor.h"
 
-#include "feature_extraction/surf.h"
+#include "feature_extraction/smart_surf.h"
 
 namespace feature_extraction
 {
 
 /**
-* \class SurfExtractor
+* \class SmartSurfExtractor
 * \brief Extractor that uses our own implementation of SURF
 */
-class SurfExtractor : public FeatureExtractor
+class SmartSurfExtractor : public FeatureExtractor
 {
 
   public:
     /**
     * Constructs a surf extractor with default parameters.
     */
-    SurfExtractor();
+    SmartSurfExtractor();
 
     // see base class for documentation
     void extract(const cv::Mat& image, std::vector<KeyPoint>& key_points,
@@ -28,7 +28,7 @@ class SurfExtractor : public FeatureExtractor
 
   private:
 
-    odometry::Surf surf_;
+    visual_odometry::SmartSurf surf_;
 };
 
 }
