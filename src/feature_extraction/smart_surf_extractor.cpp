@@ -4,17 +4,13 @@
 
 using namespace feature_extraction;
 
-static const int OCTAVES = 5;
-static const int INIT_STEP = 2;
-static const int THRESHOLD_RESPONSE = 26;
-
 bool _keyPointSort(const cv::KeyPoint& kp1, const cv::KeyPoint& kp2)
 {
     return kp1.response > kp2.response;
 }
 
 SmartSurfExtractor::SmartSurfExtractor() : FeatureExtractor(), 
-    surf_(OCTAVES, INIT_STEP, THRESHOLD_RESPONSE)
+    surf_()
 {
 }
 
