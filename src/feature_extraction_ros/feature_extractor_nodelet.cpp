@@ -25,7 +25,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
   private:
     virtual void onInit()
     {
-        ros::NodeHandle nh = ros::NodeHandle(getNodeHandle(), "feature_extractor");
+        ros::NodeHandle nh = getNodeHandle();
         ros::NodeHandle& private_nh = getPrivateNodeHandle();
         
         it_.reset(new image_transport::ImageTransport(getNodeHandle()));
@@ -34,7 +34,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
         sub_image_ = it_->subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
         
-        pub_features_ = nh.advertise<vision_msgs::Features>("features", 1);
+        pub_features_ = private_nh.advertise<vision_msgs::Features>("features", 1);
 
         private_nh.param("show_image", show_image_, false);
         int max_num_key_points;
@@ -59,6 +59,9 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                   << " max_num_key_points = " << max_num_key_points
                   << " show image = " << (show_image_ ? "yes" : "no"));
         feature_extractor_ = feature_extractor;
+
+        window_name_ = feature_extractor_name + " features";
+        cv::namedWindow(window_name_, 0);
     }
 
 
@@ -119,8 +122,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                 drawKeyPoints(canvas, key_points);
                 cv::rectangle(canvas, region_of_interest_.tl(),
                         region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
-                cv::namedWindow("Feature Extraction", 0);
-                cv::imshow("Feature Extraction", canvas);
+                cv::imshow(window_name_, canvas);
                 cv::waitKey(5);
             }
         }
@@ -158,6 +160,9 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
 
     // show debug image
     bool show_image_;
+
+    // title of the opencv window
+    std::string window_name_;
  
 };
 
