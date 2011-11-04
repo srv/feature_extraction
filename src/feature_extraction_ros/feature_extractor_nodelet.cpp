@@ -9,31 +9,10 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
 
-#include <pcl_ros/point_cloud.h>
-#include <pcl/point_types.h>
-
 #include <vision_msgs/Features.h>
 
 #include "feature_extraction/feature_extractor_factory.h"
 #include "feature_extraction/drawing.h"
-
-namespace feature_extraction_ros
-{
-
-struct Feature2D
-{
-    float x;
-    float y;
-    float data[64];
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-}
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (feature_extraction_ros::Feature2D,
-                                (float, x, x)
-                                (float, y, y)
-                                (float[64], data, data)
-                                )
 
 namespace feature_extraction_ros
 {
@@ -42,8 +21,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
   public:
     FeatureExtractorNodelet() : show_image_(false)
     { }
-
-    typedef pcl::PointCloud<Feature2D> FeatureCloud;
 
   private:
     virtual void onInit()
@@ -57,7 +34,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
         sub_image_ = it_->subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
         
-        pub_feature_cloud_ = nh.advertise<FeatureCloud>("feature_cloud", 1);
         pub_features_ = nh.advertise<vision_msgs::Features>("features", 1);
 
         private_nh.param("show_image", show_image_, false);
@@ -112,22 +88,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
             if (key_points.size() == 0)
             {
                 return;
-            }
-
-            if (pub_feature_cloud_.getNumSubscribers() > 0)
-            {
-              FeatureCloud::Ptr feature_cloud(new FeatureCloud());
-              feature_cloud->header = image_msg->header;
-              feature_cloud->points.resize(key_points.size());
-              for (size_t i = 0; i < key_points.size(); ++i)
-              {
-                  Feature2D& feature = feature_cloud->points[i];
-                  std::vector<float> descriptor = descriptors.row(i);
-                  std::copy(descriptor.begin(), descriptor.end(), feature.data);
-                  feature.x = key_points[i].pt.x;
-                  feature.y = key_points[i].pt.y;
-              }
-              pub_feature_cloud_.publish(feature_cloud);
             }
 
             if (pub_features_.getNumSubscribers() > 0)
@@ -188,7 +148,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
     image_transport::Subscriber sub_image_;
 
     // Publications
-    ros::Publisher pub_feature_cloud_;
     ros::Publisher pub_features_;
 
     // the extractor

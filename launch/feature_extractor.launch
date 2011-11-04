@@ -1,11 +1,12 @@
 <launch>
-  <arg name="manager" default="feature_extractor_manager" />
+  <arg name="manager" default="manager" />
   <arg name="standalone" default="false" />
   <arg name="image" />
 
-  <node if="$(arg standalone)" name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager" output="screen" />
+  <arg if="$(arg standalone)" name="nodelet_args" value="standalone feature_extraction/FeatureExtractor" />
+  <arg unless="$(arg standalone)" name="nodelet_args" value="load feature_extraction/FeatureExtractor $(arg manager)" />
 
-  <node name="feature_extractor" pkg="nodelet" type="nodelet" args="load feature_extraction/FeatureExtractor $(arg manager)" output="screen" >
+  <node name="feature_extractor" pkg="nodelet" type="nodelet" args="$(arg nodelet_args)" output="screen" >
     <remap from="image" to="$(arg image)" />
     <param name="max_num_key_points" value="500" />
     <param name="feature_extractor" value="SURF" />
