@@ -75,17 +75,19 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
         }
         try
         {
+            if (sensor_msgs::image_encodings::isBayer(image_msg->encoding))
+            {
+                NODELET_ERROR("Feature extraction called with bayer encoded image, skipping!");
+                return;
+            }
             // bridge to opencv
             namespace enc = sensor_msgs::image_encodings;
-            cv_bridge::CvImageConstPtr cv_ptr;
-            cv_ptr = cv_bridge::toCvCopy(image_msg, enc::BGR8);
+            cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(image_msg);
             
-            cv::Mat image = cv_ptr->image;
-
             // Calculate features
             std::vector<feature_extraction::KeyPoint> key_points;
             cv::Mat descriptors;
-            feature_extractor_->extract(image, key_points, descriptors, region_of_interest_);
+            feature_extractor_->extract(cv_ptr->image, key_points, descriptors, region_of_interest_);
 
             NODELET_DEBUG("%zu features extracted.", key_points.size());
             if (key_points.size() == 0)
@@ -107,7 +109,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                 features_msg->key_points[i].response = key_points[i].response;
                 features_msg->key_points[i].octave = key_points[i].octave;
               }
-              features_msg->descriptor_length = descriptors.cols;
               assert(descriptors.isContinuous());
               assert(descriptors.depth() == CV_32F);
               assert(descriptors.channels() == 1);
@@ -118,7 +119,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
 
             if (show_image_)
             {
-                cv::Mat canvas = image.clone();
+                cv::Mat canvas = cv_ptr->image.clone();
                 drawKeyPoints(canvas, key_points);
                 cv::rectangle(canvas, region_of_interest_.tl(),
                         region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
