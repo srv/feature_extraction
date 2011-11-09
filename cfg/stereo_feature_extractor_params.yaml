@@ -8,5 +8,5 @@ min_depth: 0.2
 max_depth: 10.0
 max_num_key_points: 5000
 
-feature_extractor: "SURF"
+feature_extractor: "SmartSURF"
 

@@ -90,7 +90,7 @@ class StereoFeatureExtractorNodelet : public nodelet::Nodelet
 
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
-                std::string("SURF"));
+                std::string("SmartSURF"));
         feature_extraction::FeatureExtractor::Ptr feature_extractor = 
             feature_extraction::FeatureExtractorFactory::create(feature_extractor_name);
         if (feature_extractor.get() == NULL)
