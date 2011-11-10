@@ -7,4 +7,12 @@
       PointCloud2 message.
     </description>
   </class>
+
+  <class name="stereo_feature_extraction/StereoFeatureMatcher" 
+         type="stereo_feature_extraction_ros::StereoFeatureMatcherNodelet" 
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet that matches incoming stereo features and publishes calculated 3D points and features.
+    </description>
+  </class>
 </library>

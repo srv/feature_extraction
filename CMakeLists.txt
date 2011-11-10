@@ -28,6 +28,7 @@ rosbuild_add_library(${PROJECT_NAME}
     src/stereo_feature_extraction/stereo_feature.cpp
     src/stereo_feature_extraction/drawing.cpp
     src/stereo_feature_extraction/stereo_feature_set.cpp
+    src/stereo_feature_extraction/stereo_matching.cpp
     )
 
 rosbuild_add_library(${PROJECT_NAME}_ros

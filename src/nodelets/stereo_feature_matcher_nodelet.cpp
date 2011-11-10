@@ -13,9 +13,10 @@
 #include <pcl/point_types.h>
 
 #include <vision_msgs/Features3D.h>
-#include "stereo_feature_extraction/conversions.h"
+#include "feature_extraction_ros/conversions.h"
 #include "stereo_feature_extraction/stereo_matching.h"
 
+#include <opencv2/highgui/highgui.hpp>
 
 namespace stereo_feature_extraction_ros
 {
@@ -107,11 +108,11 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
       std::vector<cv::KeyPoint> key_points_left;
       cv::Mat descriptors_left;
-      stereo_feature_extraction::fromMsg(*l_features_msg, key_points_left, descriptors_left);
+      feature_extraction_ros::fromMsg(*l_features_msg, key_points_left, descriptors_left);
 
       std::vector<cv::KeyPoint> key_points_right;
       cv::Mat descriptors_right;
-      stereo_feature_extraction::fromMsg(*r_features_msg, key_points_right, descriptors_right);
+      feature_extraction_ros::fromMsg(*r_features_msg, key_points_right, descriptors_right);
 
       boost::timer timer;
       cv::Mat match_mask;
@@ -119,6 +120,10 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
           match_mask, max_y_diff_, max_angle_diff_, max_size_diff_, min_disparity, max_disparity);
       double match_mask_time = timer.elapsed();
       timer.restart();
+
+      cv::namedWindow("match mask");
+      cv::imshow("match mask", match_mask);
+      cv::waitKey(5);
 
       std::vector<cv::DMatch> matches;
       stereo_feature_extraction::stereo_matching::thresholdMatching(descriptors_left, descriptors_right, matches, matching_threshold_, match_mask);
@@ -153,7 +158,7 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
           point_cloud->points[i].y = world_point.y;
           point_cloud->points[i].z = world_point.z;
 
-          stereo_feature_extraction::toMsg(key_point_left, features_3d_msg->features_left.key_points[i]);
+          feature_extraction_ros::toMsg(key_point_left, features_3d_msg->features_left.key_points[i]);
           std::copy(&(l_features_msg->descriptor_data[index_left * descriptor_length]), 
                     &(l_features_msg->descriptor_data[(index_left + 1) * descriptor_length]),
                     &(features_3d_msg->features_left.descriptor_data[i * descriptor_length]));
