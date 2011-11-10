@@ -60,7 +60,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                   << " show image = " << (show_image_ ? "yes" : "no"));
         feature_extractor_ = feature_extractor;
 
-        window_name_ = feature_extractor_name + " features";
+        window_name_ = feature_extractor_name + " features for " + nh.resolveName("image");
         cv::namedWindow(window_name_, 0);
     }
 
