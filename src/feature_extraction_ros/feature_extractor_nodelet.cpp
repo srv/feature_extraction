@@ -41,7 +41,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
         private_nh.param("max_num_key_points", max_num_key_points, 5000);
         std::string feature_extractor_name;
         private_nh.param("feature_extractor", feature_extractor_name, 
-                std::string("SURF"));
+                std::string("SmartSURF"));
         feature_extraction::FeatureExtractor::Ptr feature_extractor = 
             feature_extraction::FeatureExtractorFactory::create(feature_extractor_name);
         if (feature_extractor.get() == NULL)
