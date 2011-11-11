@@ -9,10 +9,6 @@ using namespace feature_extraction;
 
 void runTest(const std::string& extractor_name)
 {
-    std::vector<std::string> extractor_names;
-    extractor_names.push_back("CvSURF");
-    extractor_names.push_back("SURF");
-
     std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
     cv::Mat image = cv::imread(path + "/data/black_box.jpg");
     ASSERT_FALSE(image.empty());
@@ -39,14 +35,14 @@ TEST(Extractor, cvSurfRunTest)
 
 TEST(Extractor, surfRunTest)
 {
-    runTest("SURF");
+    runTest("SmartSURF");
 }
 
 TEST(Extractor, maxNumPointsTest)
 {
     std::vector<std::string> extractor_names;
     extractor_names.push_back("CvSURF");
-    extractor_names.push_back("SURF");
+    extractor_names.push_back("SmartSURF");
 
     std::string path = ros::package::getPath(ROS_PACKAGE_NAME);
     cv::Mat image = cv::imread(path + "/data/black_box.jpg");
