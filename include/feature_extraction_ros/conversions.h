@@ -41,6 +41,7 @@ namespace feature_extraction_ros
     assert(descriptors.isContinuous());
     assert(descriptors.depth() == CV_32F);
     assert(descriptors.channels() == 1);
+    assert(descriptors.dims() == 2);
 
     features_msg.key_points.resize(key_points.size());
     for (size_t i = 0; i < features_msg.key_points.size(); ++i)
