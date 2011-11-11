@@ -17,7 +17,8 @@ namespace feature_matching
     * \param matches vector to store matches
     * \param threshold the matching threshold
     * \param match_mask the mask to use to allow matches, if empty, all
-    *        descriptors are matched to each other
+    *        descriptors are matched to each other, if not empty, 
+    *        must be of size descriptors1.rows * descriptors2.rows
     */
     void thresholdMatching(const cv::Mat& descriptors1, const cv::Mat& descriptors2, 
         std::vector<cv::DMatch>& matches, double threshold, const cv::Mat& match_mask = cv::Mat());

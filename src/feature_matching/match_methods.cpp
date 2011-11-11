@@ -15,27 +15,42 @@ void feature_matching::match_methods::thresholdMatching(
       cv::DescriptorMatcher::create("BruteForce");
   std::vector<std::vector<cv::DMatch> > matches_1to2;
   descriptor_matcher->knnMatch(descriptors1, descriptors2,
-          matches_1to2, knn);
+          matches_1to2, knn, match_mask);
 
-  std::cout << matches_1to2.size() << " matches before filtering." << std::endl;
+  // output for debugging
+  // std::cout << matches_1to2.size() << " matches before threshold filtering." << std::endl;
+  int two_found, one_found, zero_found;
+  two_found = one_found = zero_found = 0;
   for (size_t m = 0; m < matches_1to2.size(); m++ )
   {
     if (matches_1to2[m].size() == 2) 
     {
       float dist1 = matches_1to2[m][0].distance;
       float dist2 = matches_1to2[m][1].distance;
-      int queryIndex = matches_1to2[m][0].queryIdx;
-      int trainIndex = matches_1to2[m][0].trainIdx;
-      if (dist1 / dist2 < threshold && match_mask.at<unsigned char>(trainIndex, queryIndex) > 0)
+      if (dist1 / dist2 < threshold)
       {
         matches.push_back(matches_1to2[m][0]);
       }
+      two_found++;
+      /*
+      // output for debugging
+      if (m % (matches_1to2.size() / 5) == 0)
+      {
+        std::cout << dist1 << " / " << dist2 << " = " << dist1 / dist2 << std::endl;
+      }
+      */
     }
     else if (matches_1to2[m].size() == 1) // only one match found -> save it
     {
       matches.push_back(matches_1to2[m][0]);
+      one_found++;
+    }
+    else
+    {
+      zero_found++;
     }
   }
-  std::cout << matches.size() << " matches after filtering." << std::endl;
+  // output for debugging
+  // std::cout << matches.size() << " matches after threshold filtering, " << two_found << " with k=2, " << one_found << " with k=1 " << zero_found << " had no partner." << std::endl;
 }
 

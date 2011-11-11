@@ -14,11 +14,13 @@
 
 #include <vision_msgs/Features3D.h>
 #include "feature_extraction_ros/conversions.h"
-#include "stereo_feature_extraction/stereo_matching.h"
+
+#include "feature_matching/match_methods.h"
+#include "feature_matching/match_constraints.h"
 
 #include <opencv2/highgui/highgui.hpp>
 
-namespace stereo_feature_extraction_ros
+namespace feature_extraction_ros
 {
 class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 {
@@ -116,17 +118,13 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
       boost::timer timer;
       cv::Mat match_mask;
-      stereo_feature_extraction::stereo_matching::computeMatchMask(key_points_left, key_points_right,
+      feature_matching::match_constraints::computeStereoMatchMask(key_points_left, key_points_right,
           match_mask, max_y_diff_, max_angle_diff_, max_size_diff_, min_disparity, max_disparity);
       double match_mask_time = timer.elapsed();
       timer.restart();
 
-      cv::namedWindow("match mask");
-      cv::imshow("match mask", match_mask);
-      cv::waitKey(5);
-
       std::vector<cv::DMatch> matches;
-      stereo_feature_extraction::stereo_matching::thresholdMatching(descriptors_left, descriptors_right, matches, matching_threshold_, match_mask);
+      feature_matching::match_methods::thresholdMatching(descriptors_left, descriptors_right, matches, matching_threshold_, match_mask);
 
       double matching_time = timer.elapsed();
       timer.restart();
@@ -151,7 +149,8 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
           int index_right = matches[i].trainIdx;
           const cv::KeyPoint& key_point_left = key_points_left[index_left];
           const cv::KeyPoint& key_point_right = key_points_right[index_right];
-          float disparity = key_point_right.pt.x - key_point_left.pt.x;
+          float disparity = key_point_left.pt.x - key_point_right.pt.x;
+          if (disparity < 0) NODELET_WARN_STREAM("oh oh, match with negative disparity! " << (int)match_mask.at<unsigned char>(index_left, index_right));
           cv::Point3d world_point;
           stereo_camera_model_.projectDisparityTo3d(key_point_left.pt, disparity, world_point);
           point_cloud->points[i].x = world_point.x;
@@ -169,7 +168,7 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
       double msg_construction_time = timer.elapsed();
 
       ros::WallTime end_time = ros::WallTime::now();
-      NODELET_INFO("%zu left, %zu right features, %zu matchings.", 
+      NODELET_INFO("%zu left, %zu right features, %zu matches.", 
           key_points_left.size(), key_points_right.size(), matches.size());
       NODELET_INFO("Timings: match mask: %f, matching: %f, msg construction: %f, total wall time: %f", 
           match_mask_time, matching_time, msg_construction_time, (end_time - start_time).toSec());
@@ -204,7 +203,7 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_DECLARE_CLASS(stereo_feature_extraction, 
+PLUGINLIB_DECLARE_CLASS(feature_extraction, 
     StereoFeatureMatcher, 
-    stereo_feature_extraction_ros::StereoFeatureMatcherNodelet, nodelet::Nodelet);
+    feature_extraction_ros::StereoFeatureMatcherNodelet, nodelet::Nodelet);
 

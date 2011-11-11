@@ -1,4 +1,4 @@
-<library path="lib/libfeature_extraction_ros">
+<library path="lib/libnodelets">
 
   <class name="feature_extraction/FeatureExtractor" 
          type="feature_extraction_ros::FeatureExtractorNodelet"
@@ -8,9 +8,8 @@
     </description>
   </class>
 
-<library path="lib/libfeature_matching_ros">
   <class name="feature_extraction/StereoFeatureMatcher" 
-         type="feature_matching_ros::StereoFeatureMatcherNodelet" 
+         type="feature_extraction_ros::StereoFeatureMatcherNodelet" 
          base_class_type="nodelet::Nodelet">
     <description>
       Nodelet that matches incoming stereo features and publishes calculated 3D points and features.

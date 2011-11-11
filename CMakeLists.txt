@@ -31,35 +31,29 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/smart_surf_extractor.cpp
     )
 
-rosbuild_add_library(${PROJECT_NAME}_ros
-    src/feature_extraction_ros/feature_extractor_nodelet.cpp
-    )
-target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
-
 rosbuild_add_library(feature_matching
-    src/stereo_feature_extraction/stereo_feature_extractor.cpp
-    src/stereo_feature_extraction/stereo_camera_model.cpp
-    src/stereo_feature_extraction/stereo_feature.cpp
-    src/stereo_feature_extraction/drawing.cpp
-    src/stereo_feature_extraction/stereo_feature_set.cpp
-    src/stereo_feature_extraction/stereo_matching.cpp
+    src/feature_matching/match_methods.cpp
+    src/feature_matching/match_constraints.cpp
     )
 
-rosbuild_add_library(feature_matching_ros
-    src/nodelets/stereo_feature_extractor_nodelet.cpp
+rosbuild_add_library(nodelets
+    src/nodelets/feature_extractor_nodelet.cpp
     src/nodelets/stereo_feature_matcher_nodelet.cpp
     )
 
-target_link_libraries(feature_matching_ros feature_matching)
+target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
+
 
 # EXECUTABLES
-rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
-rosbuild_add_executable(extractor src/tools/extractor.cpp)
-target_link_libraries(extractor ${PROJECT_NAME})
-rosbuild_link_boost(extractor program_options)
+#rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+#rosbuild_add_executable(extractor src/tools/extractor.cpp)
+#target_link_libraries(extractor ${PROJECT_NAME})
+#rosbuild_link_boost(extractor program_options)
 
 # UNIT TESTS
 rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
 target_link_libraries(feature_extractors_test ${PROJECT_NAME})
 rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
+rosbuild_add_gtest(match_constraints_test test/match_constraints_test.cpp)
+target_link_libraries(match_constraints_test feature_matching)
 
