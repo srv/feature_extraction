@@ -1,7 +1,7 @@
 <package>
   <description brief="feature_extraction">
 
-     Package for feature extraction
+     Package for feature extraction and matching
 
   </description>
   <author>Stephan Wirth</author>
@@ -12,16 +12,19 @@
   <depend package="pcl" />
   <depend package="pcl_ros" />
   <depend package="opencv2" />
+  <depend package="cv_bridge" />
   <depend package="nodelet" />
   <depend package="image_transport" />
-  <depend package="cv_bridge" />
   <depend package="vision_msgs" />
 
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfeature_extraction" />
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfeature_extraction -lfeature_extraction_ros" />
     <nodelet plugin="${prefix}/nodelet_plugins.xml" />
   </export>
 
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+  </export>
 </package>
 
 

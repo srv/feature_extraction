@@ -10,6 +10,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()
+rosbuild_add_boost_directories()
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -21,6 +22,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
+# LIBRARIES
 rosbuild_add_library(${PROJECT_NAME} 
     src/feature_extraction/cv_surf_extractor.cpp
     src/feature_extraction/drawing.cpp
@@ -34,14 +36,30 @@ rosbuild_add_library(${PROJECT_NAME}_ros
     )
 target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+rosbuild_add_library(feature_matching
+    src/stereo_feature_extraction/stereo_feature_extractor.cpp
+    src/stereo_feature_extraction/stereo_camera_model.cpp
+    src/stereo_feature_extraction/stereo_feature.cpp
+    src/stereo_feature_extraction/drawing.cpp
+    src/stereo_feature_extraction/stereo_feature_set.cpp
+    src/stereo_feature_extraction/stereo_matching.cpp
+    )
 
+rosbuild_add_library(feature_matching_ros
+    src/nodelets/stereo_feature_extractor_nodelet.cpp
+    src/nodelets/stereo_feature_matcher_nodelet.cpp
+    )
+
+target_link_libraries(feature_matching_ros feature_matching)
+
+# EXECUTABLES
+rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+rosbuild_add_executable(extractor src/tools/extractor.cpp)
+target_link_libraries(extractor ${PROJECT_NAME})
+rosbuild_link_boost(extractor program_options)
+
+# UNIT TESTS
 rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
 target_link_libraries(feature_extractors_test ${PROJECT_NAME})
 rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
+
