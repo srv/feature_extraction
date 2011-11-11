@@ -1,11 +1,15 @@
-#ifndef MATCH_FILTERS_H_
-#define MATCH_FILTERS_H_
+#ifndef MATCH_CONSTRAINTS_H_
+#define MATCH_CONSTRAINTS_H_
 
 #include <opencv2/features2d/features2d.hpp>
 
 namespace feature_matching
 {
-  namespace match_filters
+
+  /**
+  * Constraints for feature matching
+  */
+  namespace match_constraints
   {
     /**
     * Computes a match candidate mask that fulfills epipolar constraints, i.e.
