@@ -8,6 +8,7 @@
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include <vision_msgs/Features.h>
 
@@ -32,6 +33,7 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
 
         // TODO subscribe / unsubscribe on demand?
         sub_image_ = it_->subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
+        // TODO change this to service/dynamic reconfigure
         sub_region_of_interest_ = nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
         
         pub_features_ = private_nh.advertise<vision_msgs::Features>("features", 1);
@@ -81,7 +83,6 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
                 return;
             }
             // bridge to opencv
-            namespace enc = sensor_msgs::image_encodings;
             cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvShare(image_msg);
             
             // Calculate features
@@ -119,12 +120,20 @@ class FeatureExtractorNodelet : public nodelet::Nodelet
 
             if (show_image_)
             {
-                cv::Mat canvas = cv_ptr->image.clone();
-                drawKeyPoints(canvas, key_points);
-                cv::rectangle(canvas, region_of_interest_.tl(),
-                        region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
-                cv::imshow(window_name_, canvas);
-                cv::waitKey(5);
+              cv::Mat canvas;
+              if (cv_ptr->image.channels() == 1)
+              {
+                cv::cvtColor(cv_ptr->image, canvas, CV_GRAY2BGR);
+              }
+              else
+              {
+                canvas = cv_ptr->image.clone();
+              }
+              drawKeyPoints(canvas, key_points);
+              cv::rectangle(canvas, region_of_interest_.tl(),
+                      region_of_interest_.br(), cv::Scalar(0, 0, 255), 3);
+              cv::imshow(window_name_, canvas);
+              cv::waitKey(5);
             }
         }
         catch (cv_bridge::Exception& e)
