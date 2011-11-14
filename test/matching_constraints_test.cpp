@@ -5,7 +5,7 @@
 
 #include <vision_msgs/Features3D.h>
 
-#include "feature_matching/match_constraints.h"
+#include "feature_matching/matching_constraints.h"
 
 TEST(MatchConstraints, disparityTest)
 {
@@ -32,7 +32,7 @@ TEST(MatchConstraints, disparityTest)
   double min_disparity = 0.0;
   double max_disparity = 100.0;
   cv::Mat match_mask;
-  feature_matching::match_constraints::computeStereoMatchMask(
+  feature_matching::matching_constraints::computeStereoMatchMask(
       key_points_left, key_points_right, match_mask, max_y_diff, max_angle_diff,
       max_size_diff, min_disparity, max_disparity);
 

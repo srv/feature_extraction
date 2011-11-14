@@ -54,6 +54,6 @@ target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
 rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
 target_link_libraries(feature_extractors_test ${PROJECT_NAME})
 rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
-rosbuild_add_gtest(match_constraints_test test/match_constraints_test.cpp)
-target_link_libraries(match_constraints_test feature_matching)
+rosbuild_add_gtest(matching_constraints_test test/matching_constraints_test.cpp)
+target_link_libraries(matching_constraints_test feature_matching)
 
