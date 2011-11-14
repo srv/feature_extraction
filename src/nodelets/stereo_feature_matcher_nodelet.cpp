@@ -15,8 +15,8 @@
 #include <vision_msgs/Features3D.h>
 #include "feature_extraction_ros/conversions.h"
 
-#include "feature_matching/match_methods.h"
-#include "feature_matching/match_constraints.h"
+#include "feature_matching/matching_methods.h"
+#include "feature_matching/matching_constraints.h"
 
 #include <opencv2/highgui/highgui.hpp>
 
@@ -118,13 +118,13 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
       boost::timer timer;
       cv::Mat match_mask;
-      feature_matching::match_constraints::computeStereoMatchMask(key_points_left, key_points_right,
+      feature_matching::matching_constraints::computeStereoMatchMask(key_points_left, key_points_right,
           match_mask, max_y_diff_, max_angle_diff_, max_size_diff_, min_disparity, max_disparity);
       double match_mask_time = timer.elapsed();
       timer.restart();
 
       std::vector<cv::DMatch> matches;
-      feature_matching::match_methods::thresholdMatching(descriptors_left, descriptors_right, matches, matching_threshold_, match_mask);
+      feature_matching::matching_methods::thresholdMatching(descriptors_left, descriptors_right, matches, matching_threshold_, match_mask);
 
       double matching_time = timer.elapsed();
       timer.restart();

@@ -1,8 +1,8 @@
 
 #include <iostream>
-#include "feature_matching/match_constraints.h"
+#include "feature_matching/matching_constraints.h"
 
-void feature_matching::match_constraints::computeStereoMatchMask(
+void feature_matching::matching_constraints::computeStereoMatchMask(
         const std::vector<cv::KeyPoint>& key_points_left,
         const std::vector<cv::KeyPoint>& key_points_right,
         cv::Mat& match_mask, double max_y_diff, double max_angle_diff, 

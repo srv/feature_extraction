@@ -32,8 +32,8 @@ rosbuild_add_library(${PROJECT_NAME}
     )
 
 rosbuild_add_library(feature_matching
-    src/feature_matching/match_methods.cpp
-    src/feature_matching/match_constraints.cpp
+    src/feature_matching/matching_methods.cpp
+    src/feature_matching/matching_constraints.cpp
     )
 
 rosbuild_add_library(nodelets

@@ -1,11 +1,11 @@
-#ifndef MATCH_METHODS_H_
-#define MATCH_METHODS_H_
+#ifndef MATCHING_METHODS_H_
+#define MATCHING_METHODS_H_
 
 #include <opencv2/features2d/features2d.hpp>
 
 namespace feature_matching
 {
-  namespace match_methods
+  namespace matching_methods
   {
     /**
     * Matches two sets of descriptors, searching for the 2 nearest neighbors
