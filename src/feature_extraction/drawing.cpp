@@ -10,7 +10,7 @@ namespace feature_extraction
     {
         cv::Point center(cvRound(key_point.pt.x), 
                         cvRound(key_point.pt.y));
-        int radius = cvRound(key_point.size);
+        int radius = cvRound(key_point.size) / 2;
         cv::circle(image, center, radius, cv::Scalar(0, 255, 0), 2);
     }
 
