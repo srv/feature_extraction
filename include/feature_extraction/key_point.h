@@ -15,6 +15,11 @@ class KeyPoint : public cv::KeyPoint
 
       KeyPoint(const cv::KeyPoint& key_point) : cv::KeyPoint(key_point) {}
       KeyPoint() : cv::KeyPoint() {}
+
+      cv::KeyPoint toCv() const
+      {
+        return static_cast<cv::KeyPoint>(*this);
+      }
 };
 
 }

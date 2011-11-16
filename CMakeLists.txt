@@ -33,12 +33,13 @@ rosbuild_add_library(${PROJECT_NAME}
 
 rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
-    src/feature_matching/matching_constraints.cpp
+    src/feature_matching/stereo_feature_matcher.cpp
     )
 
 rosbuild_add_library(nodelets
     src/nodelets/feature_extractor_nodelet.cpp
     src/nodelets/stereo_feature_matcher_nodelet.cpp
+    src/nodelets/stereo_feature_extractor_nodelet.cpp
     )
 
 target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
@@ -54,6 +55,8 @@ target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
 rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
 target_link_libraries(feature_extractors_test ${PROJECT_NAME})
 rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
-rosbuild_add_gtest(matching_constraints_test test/matching_constraints_test.cpp)
-target_link_libraries(matching_constraints_test feature_matching)
+rosbuild_add_gtest(stereo_feature_matcher_test test/stereo_feature_matcher_test.cpp)
+target_link_libraries(stereo_feature_matcher_test feature_matching)
+rosbuild_add_gtest(full_stereo_test test/full_stereo_test.cpp)
+target_link_libraries(full_stereo_test ${PROJECT_NAME} feature_matching)
 

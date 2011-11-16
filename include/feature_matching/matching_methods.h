@@ -21,7 +21,7 @@ namespace feature_matching
     *        must be of size descriptors1.rows * descriptors2.rows
     */
     void thresholdMatching(const cv::Mat& descriptors1, const cv::Mat& descriptors2, 
-        std::vector<cv::DMatch>& matches, double threshold, const cv::Mat& match_mask = cv::Mat());
+                           double threshold, const cv::Mat& match_mask, std::vector<cv::DMatch>& matches);
   }
 }
 

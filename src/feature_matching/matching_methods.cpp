@@ -5,9 +5,9 @@
 void feature_matching::matching_methods::thresholdMatching(
                             const cv::Mat& descriptors1, 
                             const cv::Mat& descriptors2,
-                            std::vector<cv::DMatch>& matches, 
                             double threshold,
-                            const cv::Mat& match_mask)
+                            const cv::Mat& match_mask,
+                            std::vector<cv::DMatch>& matches)
 {
   matches.clear();
   int knn = 2;

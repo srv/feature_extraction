@@ -1,6 +1,6 @@
 <launch>
 
-  <node name="manager" pkg="nodelet" type="nodelet" args="manager" />
+  <node name="manager" pkg="nodelet" type="nodelet" args="manager" output="screen" />
 
   <node name="feature_extractor_left" pkg="nodelet" type="nodelet" args="load feature_extraction/FeatureExtractor manager">
     <remap from="image" to="camera_flex_wide/left/image_rect" />
@@ -14,7 +14,7 @@
     <param name="max_num_key_points" value="5000" />
   </node>
 
-  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="standalone feature_extraction/StereoFeatureMatcher" output="screen" >
+  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="load feature_extraction/StereoFeatureMatcher manager" output="screen" >
     <remap from="features_left" to="feature_extractor_left/features" />
     <remap from="features_right" to="feature_extractor_right/features" />
     <remap from="camera_info_left" to="camera_flex_wide/left/camera_info" />
