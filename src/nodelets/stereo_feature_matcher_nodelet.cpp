@@ -1,8 +1,6 @@
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
 
-#include <boost/timer.hpp>
-
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
@@ -13,14 +11,13 @@
 #include <pcl/point_types.h>
 
 #include <vision_msgs/Features3D.h>
+
 #include "feature_extraction_ros/conversions.h"
-
 #include "feature_matching/stereo_feature_matcher.h"
-
-#include <opencv2/highgui/highgui.hpp>
 
 namespace feature_extraction_ros
 {
+
 class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 {
   public:
@@ -31,68 +28,68 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
     virtual void onInit()
     {
-        ros::NodeHandle nh = getNodeHandle();
-        ros::NodeHandle& nh_private = getPrivateNodeHandle();
-        subscribed_ = false; // no subscription yet
-        
-        ros::SubscriberStatusCallback connect_cb = 
-            boost::bind(&StereoFeatureMatcherNodelet::connectCb, this);
+      ros::NodeHandle nh = getNodeHandle();
+      ros::NodeHandle& nh_private = getPrivateNodeHandle();
+      subscribed_ = false; // no subscription yet
+      
+      ros::SubscriberStatusCallback connect_cb = 
+          boost::bind(&StereoFeatureMatcherNodelet::connectCb, this);
 
-        pub_point_cloud_ = nh_private.advertise<PointCloud>("point_cloud", 1,
-                connect_cb, connect_cb);
+      pub_point_cloud_ = nh_private.advertise<PointCloud>("point_cloud", 1,
+              connect_cb, connect_cb);
 
-        pub_features_3d_ = nh_private.advertise<vision_msgs::Features3D>("features_3d", 1,
-                connect_cb, connect_cb);
+      pub_features_3d_ = nh_private.advertise<vision_msgs::Features3D>("features_3d", 1,
+              connect_cb, connect_cb);
 
-        int queue_size;
-        nh_private.param("queue_size", queue_size, 5);
+      int queue_size;
+      nh_private.param("queue_size", queue_size, 5);
 
-        nh_private.param("max_y_diff", max_y_diff_, 2.0);
-        nh_private.param("max_angle_diff", max_angle_diff_, 2.0);
-        nh_private.param("max_size_diff", max_size_diff_, 2);
-        nh_private.param("min_depth", min_depth_, 0.2);
-        nh_private.param("max_depth", max_depth_, 5.0);
-        nh_private.param("matching_threshold", matching_threshold_, 0.8);
+      nh_private.param("max_y_diff", max_y_diff_, 2.0);
+      nh_private.param("max_angle_diff", max_angle_diff_, 2.0);
+      nh_private.param("max_size_diff", max_size_diff_, 2);
+      nh_private.param("min_depth", min_depth_, 0.2);
+      nh_private.param("max_depth", max_depth_, 5.0);
+      nh_private.param("matching_threshold", matching_threshold_, 0.8);
 
-        NODELET_INFO_STREAM("Parameters: \n"
-                  " max_y_diff = " << max_y_diff_  << "\n"
-                  " max_angle_diff = " << max_angle_diff_ << "\n"
-                  " max_size_diff = " << max_size_diff_ << "\n"
-                  " depth min/max = " << min_depth_ << "/" << max_depth_ << "\n"
-                  " matching_threshold = " << matching_threshold_);
+      NODELET_INFO_STREAM("Parameters: \n"
+                          " max_y_diff = " << max_y_diff_  << "\n"
+                          " max_angle_diff = " << max_angle_diff_ << "\n"
+                          " max_size_diff = " << max_size_diff_ << "\n"
+                          " depth min/max = " << min_depth_ << "/" << max_depth_ << "\n"
+                          " matching_threshold = " << matching_threshold_);
 
-        // Synchronize inputs. Topic subscriptions happen on demand in the 
-        // connection callback.
-        exact_sync_.reset(new ExactSync(ExactPolicy(queue_size), sub_l_features_, sub_r_features_, sub_l_info_, sub_r_info_));
-        exact_sync_->registerCallback(boost::bind(&StereoFeatureMatcherNodelet::imageCb, this, _1, _2, _3, _4));
+      // Synchronize inputs. Topic subscriptions happen on demand in the 
+      // connection callback.
+      exact_sync_.reset(new ExactSync(ExactPolicy(queue_size), sub_l_features_, sub_r_features_, sub_l_info_, sub_r_info_));
+      exact_sync_->registerCallback(boost::bind(&StereoFeatureMatcherNodelet::imageCb, this, _1, _2, _3, _4));
 
-        NODELET_INFO("Waiting for client subscriptions.");
+      NODELET_INFO("Waiting for client subscriptions.");
     }
 
     // Handles (un)subscribing when clients (un)subscribe
     void connectCb()
     {
-        if (pub_features_3d_.getNumSubscribers() == 0 &&
-            pub_point_cloud_.getNumSubscribers() == 0)
-        {
-            NODELET_INFO("No more clients connected, unsubscribing from inputs.");
-            sub_l_features_  .unsubscribe();
-            sub_r_features_  .unsubscribe();
-            sub_l_info_   .unsubscribe();
-            sub_r_info_   .unsubscribe();
-            subscribed_ = false;
-        }
-        else if (!subscribed_)
-        {
-            NODELET_INFO("Client connected, subscribing to inputs.");
-            ros::NodeHandle nh = getNodeHandle();
-            // Queue size 1 should be OK; the one that matters is the synchronizer queue size.
-            sub_l_features_.subscribe(nh, "features_left", 1);
-            sub_r_features_.subscribe(nh, "features_right", 1);
-            sub_l_info_    .subscribe(nh, "camera_info_left", 1);
-            sub_r_info_    .subscribe(nh, "camera_info_right", 1);
-            subscribed_ = true;
-        }
+      if (pub_features_3d_.getNumSubscribers() == 0 &&
+          pub_point_cloud_.getNumSubscribers() == 0)
+      {
+        NODELET_INFO("No more clients connected, unsubscribing from inputs.");
+        sub_l_features_  .unsubscribe();
+        sub_r_features_  .unsubscribe();
+        sub_l_info_   .unsubscribe();
+        sub_r_info_   .unsubscribe();
+        subscribed_ = false;
+      }
+      else if (!subscribed_)
+      {
+        NODELET_INFO("Client connected, subscribing to inputs.");
+        ros::NodeHandle nh = getNodeHandle();
+        // Queue size 1 should be OK; the one that matters is the synchronizer queue size.
+        sub_l_features_.subscribe(nh, "features_left", 1);
+        sub_r_features_.subscribe(nh, "features_right", 1);
+        sub_l_info_    .subscribe(nh, "camera_info_left", 1);
+        sub_r_info_    .subscribe(nh, "camera_info_right", 1);
+        subscribed_ = true;
+      }
     }
 
     void imageCb(const vision_msgs::FeaturesConstPtr& l_features_msg,
@@ -125,13 +122,8 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
       feature_matching::StereoFeatureMatcher matcher;
       matcher.setParams(params);
 
-      boost::timer timer;
-
       std::vector<cv::DMatch> matches;
       matcher.match(key_points_left, descriptors_left, key_points_right, descriptors_right, matching_threshold_, matches);
-      double matching_time = timer.elapsed();
-
-      timer.restart();
 
       PointCloud::Ptr point_cloud(new PointCloud());
       point_cloud->points.resize(matches.size());
@@ -149,32 +141,28 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
       for (size_t i = 0; i < matches.size(); ++i)
       {
-          int index_left = matches[i].queryIdx;
-          int index_right = matches[i].trainIdx;
-          const cv::KeyPoint& key_point_left = key_points_left[index_left];
-          const cv::KeyPoint& key_point_right = key_points_right[index_right];
-          float disparity = key_point_left.pt.x - key_point_right.pt.x;
-          cv::Point3d world_point;
-          stereo_camera_model_.projectDisparityTo3d(key_point_left.pt, disparity, world_point);
-          point_cloud->points[i].x = world_point.x;
-          point_cloud->points[i].y = world_point.y;
-          point_cloud->points[i].z = world_point.z;
+        int index_left = matches[i].queryIdx;
+        int index_right = matches[i].trainIdx;
+        const cv::KeyPoint& key_point_left = key_points_left[index_left];
+        const cv::KeyPoint& key_point_right = key_points_right[index_right];
+        float disparity = key_point_left.pt.x - key_point_right.pt.x;
+        cv::Point3d world_point;
+        stereo_camera_model_.projectDisparityTo3d(key_point_left.pt, disparity, world_point);
+        point_cloud->points[i].x = world_point.x;
+        point_cloud->points[i].y = world_point.y;
+        point_cloud->points[i].z = world_point.z;
 
-          feature_extraction_ros::toMsg(key_point_left, features_3d_msg->features_left.key_points[i]);
-          std::copy(&(l_features_msg->descriptor_data[index_left * descriptor_length]), 
-                    &(l_features_msg->descriptor_data[(index_left + 1) * descriptor_length]),
-                    &(features_3d_msg->features_left.descriptor_data[i * descriptor_length]));
+        feature_extraction_ros::toMsg(key_point_left, features_3d_msg->features_left.key_points[i]);
+        std::copy(&(l_features_msg->descriptor_data[index_left * descriptor_length]), 
+                  &(l_features_msg->descriptor_data[(index_left + 1) * descriptor_length]),
+                  &(features_3d_msg->features_left.descriptor_data[i * descriptor_length]));
       }
       pub_point_cloud_.publish(point_cloud);
       pub_features_3d_.publish(features_3d_msg);
 
-      double msg_construction_time = timer.elapsed();
-
       ros::WallTime end_time = ros::WallTime::now();
-      NODELET_INFO("%zu left, %zu right features, %zu matches.", 
-          key_points_left.size(), key_points_right.size(), matches.size());
-      NODELET_INFO("Timings: matching: %f, msg construction: %f, total wall time: %f", 
-          matching_time, msg_construction_time, (end_time - start_time).toSec());
+      NODELET_INFO("%zu left, %zu right features, %zu matches, %f sec.", 
+          key_points_left.size(), key_points_right.size(), matches.size(), (end_time - start_time).toSec());
     }
 
   private:
@@ -207,6 +195,6 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
 
 #include <pluginlib/class_list_macros.h>
 PLUGINLIB_DECLARE_CLASS(feature_extraction, 
-    StereoFeatureMatcher, 
-    feature_extraction_ros::StereoFeatureMatcherNodelet, nodelet::Nodelet);
+  StereoFeatureMatcher, 
+  feature_extraction_ros::StereoFeatureMatcherNodelet, nodelet::Nodelet);
 
