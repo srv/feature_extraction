@@ -39,7 +39,6 @@ rosbuild_add_library(feature_matching
 rosbuild_add_library(nodelets
     src/nodelets/feature_extractor_nodelet.cpp
     src/nodelets/stereo_feature_matcher_nodelet.cpp
-    src/nodelets/stereo_feature_extractor_nodelet.cpp
     )
 
 target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
