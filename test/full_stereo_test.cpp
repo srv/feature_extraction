@@ -108,7 +108,7 @@ TEST(FullStereo, runTest)
   cv::drawMatches(image_left, key_points_left, image_right, key_points_right, matches, canvas);
   cv::namedWindow("matches", 0);
   cv::imshow("matches", canvas);
-  cv::waitKey(20000);
+  cv::waitKey(5000);
 }
 
 // Run all the tests that were declared with TEST()
