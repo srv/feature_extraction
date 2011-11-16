@@ -14,16 +14,16 @@
     <param name="max_num_key_points" value="5000" />
   </node>
 
-  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="load feature_extraction/StereoFeatureMatcher manager" output="screen" >
+  <node name="stereo_feature_matcher" pkg="nodelet" type="nodelet" args="load feature_extraction/StereoFeatureMatcher manager" output="screen" >
     <remap from="features_left" to="feature_extractor_left/features" />
     <remap from="features_right" to="feature_extractor_right/features" />
     <remap from="camera_info_left" to="camera_flex_wide/left/camera_info" />
     <remap from="camera_info_right" to="camera_flex_wide/right/camera_info" />
-    <param name="min_depth" value="0.1" />
-    <param name="max_depth" value="20.0" />
-    <param name="max_y_diff" value="3.0" />
-    <param name="max_angle_diff" value="10" />
-    <param name="max_size_diff" value="10" />
+    <param name="min_depth" value="0.3" />
+    <param name="max_depth" value="10.0" />
+    <param name="max_y_diff" value="1.0" />
+    <param name="max_angle_diff" value="5" />
+    <param name="max_size_diff" value="1" />
     <param name="matching_threshold" value="0.9" />
   </node>
 
