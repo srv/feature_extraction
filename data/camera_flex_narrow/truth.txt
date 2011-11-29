@@ -1,0 +1,10 @@
+# left image, right image, expected distance [m]
+left_020.jpg right_020.jpg 0.195
+left_040.jpg right_040.jpg 0.4
+left_060.jpg right_060.jpg 0.6
+left_080.jpg right_080.jpg 0.8
+left_100.jpg right_100.jpg 1.0
+left_120.jpg right_120.jpg 1.2
+left_140.jpg right_140.jpg 1.4
+left_160.jpg right_160.jpg 1.6
+left_180.jpg right_180.jpg 1.8

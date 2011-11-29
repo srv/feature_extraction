@@ -51,7 +51,7 @@ class PlaneFittingNode
           // Mandatory
           seg.setModelType(pcl::SACMODEL_PLANE);
           seg.setMethodType(pcl::SAC_RANSAC);
-          seg.setDistanceThreshold(0.25);
+          seg.setDistanceThreshold(0.10); // we allow 10 cm
           seg.setInputCloud(point_cloud);
           seg.segment(inliers, coefficients);
 
@@ -92,7 +92,7 @@ class PlaneFittingNode
               m2 += delta * (distances[i] - mean_distance);
           }
           double variance = m2 / (distances.size() - 1);
-          ROS_INFO_STREAM("distances from fitted plane: mean = " << mean_distance
+          ROS_INFO_STREAM("inlier distances from fitted plane: mean = " << mean_distance
               << " stddev = " << sqrt(variance) << " min = " << min_distance 
               << " max = " << max_distance);
         }

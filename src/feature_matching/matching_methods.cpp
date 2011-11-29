@@ -54,3 +54,26 @@ void feature_matching::matching_methods::thresholdMatching(
   // std::cout << matches.size() << " matches after threshold filtering, " << two_found << " with k=2, " << one_found << " with k=1 " << zero_found << " had no partner." << std::endl;
 }
 
+void feature_matching::matching_methods::crossCheckFilter(
+    const std::vector<cv::DMatch>& matches1to2, 
+    const std::vector<cv::DMatch>& matches2to1,
+    std::vector<cv::DMatch>& checked_matches)
+{
+  checked_matches.clear();
+  for (size_t i = 0; i < matches1to2.size(); ++i)
+  {
+    bool match_found = false;
+    const cv::DMatch& forward_match = matches1to2[i];
+    for (size_t j = 0; j < matches2to1.size() && match_found == false; ++j)
+    {
+      const cv::DMatch& backward_match = matches2to1[j];
+      if (forward_match.trainIdx == backward_match.queryIdx &&
+          forward_match.queryIdx == backward_match.trainIdx)
+      {
+        checked_matches.push_back(forward_match);
+        match_found = true;
+      }
+    }
+  }
+}
+

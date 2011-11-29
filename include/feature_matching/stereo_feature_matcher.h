@@ -34,15 +34,6 @@ namespace feature_matching
         */
         double max_size_diff;
 
-        /**
-        * minimum allowed disparity
-        */
-        double min_disparity;
-
-        /**
-        * maximum allowed disparity
-        */
-        double max_disparity;
       };
 
       StereoFeatureMatcher() {}

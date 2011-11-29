@@ -1,22 +1,38 @@
+#include <iostream>
+
 #include "feature_matching/matching_methods.h"
 
 #include "feature_matching/stereo_feature_matcher.h"
 
-void feature_matching::StereoFeatureMatcher::match(const std::vector<cv::KeyPoint>& key_points_left, 
-                                                   const cv::Mat& descriptors_left,
-                                                   const std::vector<cv::KeyPoint>& key_points_right,
-                                                   const cv::Mat& descriptors_right, 
-                                                   double matching_threshold,
-                                                   std::vector<cv::DMatch>& matches) const
+void feature_matching::StereoFeatureMatcher::match(
+  const std::vector<cv::KeyPoint>& key_points_left,
+  const cv::Mat& descriptors_left,
+  const std::vector<cv::KeyPoint>& key_points_right,
+  const cv::Mat& descriptors_right,
+  double matching_threshold,
+  std::vector<cv::DMatch>& matches) const
 {
   cv::Mat match_mask;
   computeMatchMask(key_points_left, key_points_right, match_mask);
+#if 0
   feature_matching::matching_methods::thresholdMatching(descriptors_left, descriptors_right, matching_threshold, match_mask, matches);
+#else
+  std::vector<cv::DMatch> left_to_right_matches;
+  feature_matching::matching_methods::thresholdMatching(descriptors_left, descriptors_right, matching_threshold, match_mask, left_to_right_matches);
+  std::vector<cv::DMatch> right_to_left_matches;
+  feature_matching::matching_methods::thresholdMatching(descriptors_right, descriptors_left, matching_threshold, match_mask.t(), right_to_left_matches);
+
+  feature_matching::matching_methods::crossCheckFilter(left_to_right_matches, right_to_left_matches, matches);
+
+  std::cout << left_to_right_matches.size() << " left to right matches, " << right_to_left_matches.size() << " right to left matches, "
+            << matches.size() << " filtered matches." << std::endl;
+#endif
+
 }
 
 void feature_matching::StereoFeatureMatcher::computeMatchMask(
-        const std::vector<cv::KeyPoint>& key_points_left,
-        const std::vector<cv::KeyPoint>& key_points_right, cv::Mat& match_mask) const
+  const std::vector<cv::KeyPoint>& key_points_left,
+  const std::vector<cv::KeyPoint>& key_points_right, cv::Mat& match_mask) const
 {
   if (key_points_left.empty() || key_points_right.empty())
   {
@@ -41,13 +57,13 @@ void feature_matching::StereoFeatureMatcher::computeMatchMask(
         // angle check
         // NOTE: cv::KeyPoint carries angle information in degrees
         double angle_diff = std::abs(keypoint_left.angle - keypoint_right.angle);
-        angle_diff = std::min(360 - angle_diff, angle_diff); 
+        angle_diff = std::min(360 - angle_diff, angle_diff);
         if (angle_diff <= params_.max_angle_diff)
         {
           angle_diff_ok++;
           // disparity check
           double disparity = keypoint_left.pt.x - keypoint_right.pt.x;
-          if (disparity >= params_.min_disparity && disparity <= params_.max_disparity)
+          if (disparity >= 0)
           {
             disparity_ok++;
             // size check
@@ -72,10 +88,10 @@ void feature_matching::StereoFeatureMatcher::computeMatchMask(
   }
   /*
   std::cout << match_mask.rows * match_mask.cols << " possible matches: " << std::endl
-            << "  " << y_diff_ok     << " y diff <= " << max_y_diff << " ok " << std::endl
-            << "    " << angle_diff_ok << " angle diff <= " << max_angle_diff << " ok " << std::endl
-            << "      " << disparity_ok  << " disparity >= " << min_disparity << " && disparity <= " << max_disparity << " ok " << std::endl
-            << "        " << size_diff_ok  << " size diff <= " << max_size_diff << " ok " << std::endl;
-            */
+        << "  " << y_diff_ok     << " y diff <= " << params_.max_y_diff << " ok " << std::endl
+        << "    " << angle_diff_ok << " angle diff <= " << params_.max_angle_diff << " ok " << std::endl
+        << "      " << disparity_ok  << " disparity >= 0  ok " << std::endl
+        << "        " << size_diff_ok  << " size diff <= " << params_.max_size_diff << " ok " << std::endl;
+        */
 }
 

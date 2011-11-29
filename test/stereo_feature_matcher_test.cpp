@@ -29,8 +29,6 @@ TEST(StereoFeatureMatcher, disparityTest)
   params.max_y_diff = 10.0;
   params.max_angle_diff = 10.0;
   params.max_size_diff = 10.0;
-  params.min_disparity = 0.0;
-  params.max_disparity = 100.0;
   feature_matching::StereoFeatureMatcher matcher;
   matcher.setParams(params);
 

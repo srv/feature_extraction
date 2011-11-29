@@ -8,7 +8,8 @@
 #include <image_geometry/stereo_camera_model.h>
 
 #include "feature_matching/stereo_feature_matcher.h"
-#include "feature_extraction/feature_extractor_factory.h"
+#include "feature_extraction/key_point_detector_factory.h"
+#include "feature_extraction/descriptor_extractor_factory.h"
 
 TEST(FullStereo, runTest)
 {
@@ -20,23 +21,25 @@ TEST(FullStereo, runTest)
   ASSERT_FALSE(image_right.empty());
 
   // extract features
-  feature_extraction::FeatureExtractor::Ptr extractor = feature_extraction::FeatureExtractorFactory::create("SmartSURF");
-  std::vector<feature_extraction::KeyPoint> key_points_l, key_points_r;
-  cv::Mat descriptors_left, descriptors_right;
-  extractor->extract(image_left, key_points_l, descriptors_left);
-  extractor->extract(image_right, key_points_r, descriptors_right);
-
+  feature_extraction::KeyPointDetector::Ptr detector = 
+    feature_extraction::KeyPointDetectorFactory::create("SmartSURF");
+  feature_extraction::DescriptorExtractor::Ptr extractor = 
+    feature_extraction::DescriptorExtractorFactory::create("SmartSURF");
   std::vector<cv::KeyPoint> key_points_left, key_points_right;
-  for (size_t i = 0; i < key_points_l.size(); ++i) key_points_left.push_back(key_points_l[i].toCv());
-  for (size_t i = 0; i < key_points_r.size(); ++i) key_points_right.push_back(key_points_r[i].toCv());
+  cv::Mat descriptors_left, descriptors_right;
+  detector->detect(image_left, key_points_left);
+  detector->detect(image_right, key_points_right);
+  extractor->extract(image_left, key_points_left, descriptors_left);
+  extractor->extract(image_right, key_points_right, descriptors_right);
+
+  EXPECT_EQ(key_points_left.size(), descriptors_left.rows);
+  EXPECT_EQ(key_points_right.size(), descriptors_right.rows);
 
   // match features
   feature_matching::StereoFeatureMatcher::Params params;
   params.max_y_diff = 10.0;
   params.max_angle_diff = 10.0;
   params.max_size_diff = 10.0;
-  params.min_disparity = 0.0;
-  params.max_disparity = 100.0;
   feature_matching::StereoFeatureMatcher matcher;
   matcher.setParams(params);
 

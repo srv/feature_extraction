@@ -22,6 +22,10 @@ namespace feature_matching
     */
     void thresholdMatching(const cv::Mat& descriptors1, const cv::Mat& descriptors2, 
                            double threshold, const cv::Mat& match_mask, std::vector<cv::DMatch>& matches);
+
+    void crossCheckFilter(const std::vector<cv::DMatch>& matches1to2, 
+                          const std::vector<cv::DMatch>& matches2to1,
+                          std::vector<cv::DMatch>& checked_matches);
   }
 }
 

@@ -24,16 +24,20 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 # LIBRARIES
 rosbuild_add_library(${PROJECT_NAME} 
-    src/feature_extraction/cv_surf_extractor.cpp
-    src/feature_extraction/drawing.cpp
-    src/feature_extraction/feature_extractor_factory.cpp
+    src/feature_extraction/key_point_detector_factory.cpp
+    src/feature_extraction/descriptor_extractor_factory.cpp
+    src/feature_extraction/cv_key_point_detector.cpp
+    src/feature_extraction/cv_descriptor_extractor.cpp
     src/feature_extraction/smart_surf.cpp
-    src/feature_extraction/smart_surf_extractor.cpp
+    src/feature_extraction/smart_surf_key_point_detector.cpp
+    src/feature_extraction/smart_surf_descriptor_extractor.cpp
+    src/feature_extraction/key_points_filter.cpp
     )
 
 rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
     src/feature_matching/stereo_feature_matcher.cpp
+    src/feature_matching/stereo_depth_estimator.cpp
     )
 
 rosbuild_add_library(nodelets
@@ -45,17 +49,34 @@ target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
 
 
 # EXECUTABLES
-#rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
 #rosbuild_add_executable(extractor src/tools/extractor.cpp)
 #target_link_libraries(extractor ${PROJECT_NAME})
 #rosbuild_link_boost(extractor program_options)
 
 # UNIT TESTS
-rosbuild_add_gtest(feature_extractors_test test/feature_extractors_test.cpp)
-target_link_libraries(feature_extractors_test ${PROJECT_NAME})
+rosbuild_add_gtest(key_point_detectors_test test/key_point_detectors_test.cpp)
+target_link_libraries(key_point_detectors_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(descriptor_extractors_test test/descriptor_extractors_test.cpp)
+target_link_libraries(descriptor_extractors_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(key_points_filter_test test/key_points_filter_test.cpp)
+target_link_libraries(key_points_filter_test ${PROJECT_NAME} gtest_main)
+
 rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
+  
 rosbuild_add_gtest(stereo_feature_matcher_test test/stereo_feature_matcher_test.cpp)
 target_link_libraries(stereo_feature_matcher_test feature_matching)
+
 rosbuild_add_gtest(full_stereo_test test/full_stereo_test.cpp)
 target_link_libraries(full_stereo_test ${PROJECT_NAME} feature_matching)
+
+rosbuild_add_gtest(matching_methods_test test/matching_methods_test.cpp)
+target_link_libraries(matching_methods_test feature_matching)
+
+rosbuild_add_gtest(depth_estimation_test test/depth_estimation_test.cpp)
+target_link_libraries(depth_estimation_test ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(depth_estimation_test system filesystem)
+
 

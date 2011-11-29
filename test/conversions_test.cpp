@@ -125,6 +125,14 @@ TEST(Conversions, featuresTest)
   }
 }
 
+TEST(Conversions, emptyTest)
+{
+  std::vector<cv::KeyPoint> key_points;
+  cv::Mat descriptors;
+  vision_msgs::Features features_msg;
+  feature_extraction_ros::toMsg(key_points, descriptors, features_msg);
+}
+
 // Run all the tests that were declared with TEST()
 int main(int argc, char **argv){
     testing::InitGoogleTest(&argc, argv);
