@@ -19,6 +19,7 @@ class PlaneFittingNode
 
     ros::Subscriber point_cloud_sub_;
     ros::Publisher mean_dist_pub_;
+    ros::Publisher plane_dist_pub_;
 
   public:
     PlaneFittingNode() : nh_private_("~")
@@ -34,12 +35,14 @@ class PlaneFittingNode
     {
         point_cloud_sub_ = nh_.subscribe<PointCloud>("point_cloud", 1, &PlaneFittingNode::pointCloudCb, this);
         mean_dist_pub_ = nh_.advertise<std_msgs::Float64>("mean_distance", 1);
+        plane_dist_pub_ = nh_.advertise<std_msgs::Float64>("plane_distance", 1);
     }
 
     void pointCloudCb(const PointCloud::ConstPtr& point_cloud)
     {
         publishMeanDistance(point_cloud);
 
+        std_msgs::Float64 plane_dist_msg;
         if (point_cloud->points.size() > 3)
         {
           pcl::ModelCoefficients coefficients;
@@ -67,6 +70,8 @@ class PlaneFittingNode
           double b = coefficients.values[1];
           double c = coefficients.values[2];
           double d = coefficients.values[3];
+
+          plane_dist_msg.data = d;
 
           ROS_INFO_STREAM("fitted plane coefficients: " << a << " " << b << " " 
               << c << " " << d << " (angle to z axis: " << acos(c) / M_PI * 180.0  << ")");
@@ -99,11 +104,20 @@ class PlaneFittingNode
         else
         {
           ROS_INFO("Not enough points to compute plane.");
+          plane_dist_msg.data = -1;
         }
+        plane_dist_pub_.publish(plane_dist_msg);
     }
 
     void publishMeanDistance(const PointCloud::ConstPtr& point_cloud)
     {
+      std_msgs::Float64 dist_msg;
+      if (point_cloud->points.size() == 0)
+      {
+        dist_msg.data = -1;
+      }
+      else
+      {
         double mean_dist, min_dist, max_dist, mean_z, min_z, max_z;
         mean_dist = mean_z = 0.0;
         min_dist = min_z = std::numeric_limits<double>::max();
@@ -122,14 +136,12 @@ class PlaneFittingNode
         mean_dist /= point_cloud->points.size();
         mean_z /= point_cloud->points.size();
 
-
         ROS_INFO_STREAM("Distances to origin: MIN: " << min_dist << "\tMAX: " << max_dist << " \tMEAN: " << mean_dist);
         ROS_INFO_STREAM("                  Z: MIN: " << min_z << "\tMAX: " << max_z << " \tMEAN: " << mean_z);
 
-        std_msgs::Float64 dist_msg;
         dist_msg.data = mean_z;
-
-        mean_dist_pub_.publish(dist_msg);
+      }
+      mean_dist_pub_.publish(dist_msg);
     }
  
 };
