@@ -34,8 +34,8 @@ class PlaneFittingNode
     void init()
     {
         point_cloud_sub_ = nh_.subscribe<PointCloud>("point_cloud", 1, &PlaneFittingNode::pointCloudCb, this);
-        mean_dist_pub_ = nh_.advertise<std_msgs::Float64>("mean_distance", 1);
-        plane_dist_pub_ = nh_.advertise<std_msgs::Float64>("plane_distance", 1);
+        mean_dist_pub_ = nh_private_.advertise<std_msgs::Float64>("mean_distance", 1);
+        plane_dist_pub_ = nh_private_.advertise<std_msgs::Float64>("plane_distance", 1);
     }
 
     void pointCloudCb(const PointCloud::ConstPtr& point_cloud)
@@ -71,7 +71,7 @@ class PlaneFittingNode
           double c = coefficients.values[2];
           double d = coefficients.values[3];
 
-          plane_dist_msg.data = d;
+          plane_dist_msg.data = d > 0 ? d : -d;
 
           ROS_INFO_STREAM("fitted plane coefficients: " << a << " " << b << " " 
               << c << " " << d << " (angle to z axis: " << acos(c) / M_PI * 180.0  << ")");
