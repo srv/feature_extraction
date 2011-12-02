@@ -108,13 +108,10 @@ private:
                    "%zu descriptors extracted.", num_before_filter,
                    num_after_filter, key_points.size());
 
-      if (pub_features_.getNumSubscribers() > 0)
-      {
-        vision_msgs::Features::Ptr features_msg(new vision_msgs::Features());
-        features_msg->header = image_msg->header;
-        feature_extraction_ros::toMsg(key_points, descriptors, *features_msg);
-        pub_features_.publish(features_msg);
-      }
+      vision_msgs::Features::Ptr features_msg(new vision_msgs::Features());
+      features_msg->header = image_msg->header;
+      feature_extraction_ros::toMsg(key_points, descriptors, *features_msg);
+      pub_features_.publish(features_msg);
 
       if (show_debug_image_)
       {
