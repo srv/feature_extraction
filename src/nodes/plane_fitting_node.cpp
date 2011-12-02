@@ -10,7 +10,7 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_ros/point_cloud.h>
 
-typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloud;
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 class PlaneFittingNode
 {
