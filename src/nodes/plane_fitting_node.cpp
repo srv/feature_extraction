@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include <std_msgs/Float64.h>
+#include <geometry_msgs/PointStamped.h>
 
 #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
@@ -34,15 +34,16 @@ class PlaneFittingNode
     void init()
     {
         point_cloud_sub_ = nh_.subscribe<PointCloud>("point_cloud", 1, &PlaneFittingNode::pointCloudCb, this);
-        mean_dist_pub_ = nh_private_.advertise<std_msgs::Float64>("mean_distance", 1);
-        plane_dist_pub_ = nh_private_.advertise<std_msgs::Float64>("plane_distance", 1);
+        mean_dist_pub_ = nh_private_.advertise<geometry_msgs::PointStamped>("mean_distance", 1);
+        plane_dist_pub_ = nh_private_.advertise<geometry_msgs::PointStamped>("plane_distance", 1);
     }
 
     void pointCloudCb(const PointCloud::ConstPtr& point_cloud)
     {
         publishMeanDistance(point_cloud);
 
-        std_msgs::Float64 plane_dist_msg;
+        geometry_msgs::PointStamped plane_dist_msg;
+        plane_dist_msg.header = point_cloud->header;
         if (point_cloud->points.size() > 3)
         {
           pcl::ModelCoefficients coefficients;
@@ -71,7 +72,7 @@ class PlaneFittingNode
           double c = coefficients.values[2];
           double d = coefficients.values[3];
 
-          plane_dist_msg.data = d > 0 ? d : -d;
+          plane_dist_msg.point.z = d > 0 ? d : -d;
 
           ROS_INFO_STREAM("fitted plane coefficients: " << a << " " << b << " " 
               << c << " " << d << " (angle to z axis: " << acos(c) / M_PI * 180.0  << ")");
@@ -104,17 +105,18 @@ class PlaneFittingNode
         else
         {
           ROS_INFO("Not enough points to compute plane.");
-          plane_dist_msg.data = -1;
+          plane_dist_msg.point.z = -1;
         }
         plane_dist_pub_.publish(plane_dist_msg);
     }
 
     void publishMeanDistance(const PointCloud::ConstPtr& point_cloud)
     {
-      std_msgs::Float64 dist_msg;
+      geometry_msgs::PointStamped dist_msg;
+      dist_msg.header = point_cloud->header;
       if (point_cloud->points.size() == 0)
       {
-        dist_msg.data = -1;
+        dist_msg.point.z = -1;
       }
       else
       {
@@ -139,7 +141,7 @@ class PlaneFittingNode
         ROS_INFO_STREAM("Distances to origin: MIN: " << min_dist << "\tMAX: " << max_dist << " \tMEAN: " << mean_dist);
         ROS_INFO_STREAM("                  Z: MIN: " << min_z << "\tMAX: " << max_z << " \tMEAN: " << mean_z);
 
-        dist_msg.data = mean_z;
+        dist_msg.point.z = mean_z;
       }
       mean_dist_pub_.publish(dist_msg);
     }
