@@ -12,6 +12,8 @@ void feature_matching::StereoFeatureMatcher::match(
   double matching_threshold,
   std::vector<cv::DMatch>& matches) const
 {
+  if (key_points_left.size() == 0 || key_points_right.size() == 0 ||
+      descriptors_left.rows == 0 || descriptors_right.rows == 0) return;
   cv::Mat match_mask;
   computeMatchMask(key_points_left, key_points_right, match_mask);
 #if 0
