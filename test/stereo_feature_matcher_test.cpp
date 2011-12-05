@@ -44,6 +44,51 @@ TEST(StereoFeatureMatcher, disparityTest)
   
 }
 
+TEST(StereoFeatureMatcher, emptyTest)
+{
+  std::vector<cv::KeyPoint> key_points_left;
+  std::vector<cv::KeyPoint> key_points_right;
+
+  feature_matching::StereoFeatureMatcher::Params params;
+  params.max_y_diff = 10.0;
+  params.max_angle_diff = 10.0;
+  params.max_size_diff = 10.0;
+  feature_matching::StereoFeatureMatcher matcher;
+  matcher.setParams(params);
+
+  cv::Mat match_mask;
+  matcher.computeMatchMask(
+      key_points_left, key_points_right, match_mask);
+
+  EXPECT_EQ(match_mask.rows, 0);
+  EXPECT_EQ(match_mask.cols, 0);
+}
+
+TEST(StereoFeatureMatcher, matchTestEmpty)
+{
+  std::vector<cv::KeyPoint> key_points_left;
+  cv::Mat descriptors_left;
+  std::vector<cv::KeyPoint> key_points_right;
+  cv::Mat descriptors_right;
+
+  feature_matching::StereoFeatureMatcher::Params params;
+  params.max_y_diff = 10.0;
+  params.max_angle_diff = 10.0;
+  params.max_size_diff = 10.0;
+  feature_matching::StereoFeatureMatcher matcher;
+  matcher.setParams(params);
+
+  std::vector<cv::DMatch> matches;
+
+  matcher.match(
+      key_points_left, descriptors_left,
+      key_points_right, descriptors_right,
+      0.8, matches);
+
+  EXPECT_EQ(matches.size(), 0);
+}
+
+
 
 
 // Run all the tests that were declared with TEST()

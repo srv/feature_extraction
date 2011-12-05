@@ -6,6 +6,17 @@
 
 #include "feature_matching/matching_methods.h"
 
+TEST(MatchingMethods, thresholdMatchingTestEmpty)
+{
+  cv::Mat descriptors1;
+  cv::Mat descriptors2;
+  double threshold = 0.9;
+  cv::Mat match_mask;
+  std::vector<cv::DMatch> matches;
+  feature_matching::matching_methods::thresholdMatching(
+      descriptors1, descriptors2, threshold, match_mask, matches);
+}
+
 TEST(MatchingMethods, crossCheckFilterTest)
 {
   std::vector<cv::DMatch> forward_matches(100);
