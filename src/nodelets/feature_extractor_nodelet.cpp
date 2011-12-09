@@ -17,6 +17,7 @@
 #include "feature_extraction/key_points_filter.h"
 
 #include "feature_extraction_ros/conversions.h"
+#include "feature_extraction_ros/region_of_interest_server.h"
 
 namespace feature_extraction_ros
 {
@@ -37,8 +38,9 @@ private:
 
     // TODO subscribe / unsubscribe on demand?
     sub_image_ = it_->subscribe("image", 1, &FeatureExtractorNodelet::imageCb, this);
-    // TODO change this to service/dynamic reconfigure
-    sub_region_of_interest_ = private_nh.subscribe("region_of_interest", 10, &FeatureExtractorNodelet::setRegionOfInterest, this);
+
+    region_of_interest_server_.reset(
+        new RegionOfInterestServer(private_nh, boost::bind(&FeatureExtractorNodelet::setRegionOfInterest, this, _1)));
 
     pub_features_ = private_nh.advertise<vision_msgs::Features>("features", 1);
 
@@ -101,12 +103,23 @@ private:
       feature_extraction::KeyPointsFilter::filterBest(key_points, 
                                                       max_num_key_points_);
       size_t num_after_filter = key_points.size();
+
+      // shift key point positions according to roi
+      if (region_of_interest_.x != 0 || region_of_interest_.y != 0)
+      {
+        for (size_t i = 0; i < key_points.size(); ++i)
+        {
+          key_points[i].pt.x += region_of_interest_.x;
+          key_points[i].pt.y += region_of_interest_.y;
+        }
+      }
+
       cv::Mat descriptors;
       descriptor_extractor_->extract(roi, key_points, descriptors);
 
-      NODELET_INFO("%zu key points detected, %zu survived filter, "
+      NODELET_INFO("%zu key points detected, %zu after taking the %i best, "
                    "%zu descriptors extracted.", num_before_filter,
-                   num_after_filter, key_points.size());
+                   num_after_filter, max_num_key_points_, key_points.size());
 
       vision_msgs::Features::Ptr features_msg(new vision_msgs::Features());
       features_msg->header = image_msg->header;
@@ -139,22 +152,21 @@ private:
     }
   }
 
-  void setRegionOfInterest(const sensor_msgs::RegionOfInterestConstPtr& roi_msg)
+  void setRegionOfInterest(const cv::Rect& roi)
   {
-    region_of_interest_.x = roi_msg->x_offset;
-    region_of_interest_.y = roi_msg->y_offset;
-    region_of_interest_.width = roi_msg->width;
-    region_of_interest_.height = roi_msg->height;
+    region_of_interest_ = roi;
     NODELET_INFO("Region of interest set to: (%i, %i), %ix%i",
                  region_of_interest_.x,
                  region_of_interest_.y,
                  region_of_interest_.width,
                  region_of_interest_.height);
-  }
+   }
 
   ros::Subscriber sub_region_of_interest_;
   boost::shared_ptr<image_transport::ImageTransport> it_;
   image_transport::Subscriber sub_image_;
+
+  boost::shared_ptr<RegionOfInterestServer> region_of_interest_server_;
 
   ros::Publisher pub_features_;
 
