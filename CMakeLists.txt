@@ -20,7 +20,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
-#rosbuild_gensrv()
+rosbuild_gensrv()
 
 # LIBRARIES
 rosbuild_add_library(${PROJECT_NAME} 
@@ -34,6 +34,10 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/key_points_filter.cpp
     )
 
+rosbuild_add_library(${PROJECT_NAME}_ros
+    src/feature_extraction_ros/region_of_interest_server.cpp
+    )
+
 rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
     src/feature_matching/stereo_feature_matcher.cpp
@@ -45,7 +49,7 @@ rosbuild_add_library(nodelets
     src/nodelets/stereo_feature_matcher_nodelet.cpp
     )
 
-target_link_libraries(nodelets ${PROJECT_NAME} feature_matching)
+target_link_libraries(nodelets ${PROJECT_NAME} ${PROJECT_NAME}_ros feature_matching)
 
 
 # EXECUTABLES
