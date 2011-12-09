@@ -58,7 +58,7 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
       // Synchronize inputs. Topic subscriptions happen on demand in the 
       // connection callback.
       exact_sync_.reset(new ExactSync(ExactPolicy(queue_size), sub_l_features_, sub_r_features_, sub_l_info_, sub_r_info_));
-      exact_sync_->registerCallback(boost::bind(&StereoFeatureMatcherNodelet::imageCb, this, _1, _2, _3, _4));
+      exact_sync_->registerCallback(boost::bind(&StereoFeatureMatcherNodelet::featuresCb, this, _1, _2, _3, _4));
 
       NODELET_INFO("Waiting for client subscriptions.");
     }
@@ -89,7 +89,7 @@ class StereoFeatureMatcherNodelet : public nodelet::Nodelet
       }
     }
 
-    void imageCb(const vision_msgs::FeaturesConstPtr& l_features_msg,
+    void featuresCb(const vision_msgs::FeaturesConstPtr& l_features_msg,
                  const vision_msgs::FeaturesConstPtr& r_features_msg,
                  const sensor_msgs::CameraInfoConstPtr& l_info_msg,
                  const sensor_msgs::CameraInfoConstPtr& r_info_msg)

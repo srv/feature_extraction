@@ -15,4 +15,13 @@
       Nodelet that matches incoming stereo features and publishes calculated 3D points and features.
     </description>
   </class>
+
+  <class name="feature_extraction/StereoFeatureExtractor" 
+         type="feature_extraction_ros::StereoFeatureExtractorNodelet" 
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet that extracts features on incoming stereo images and publishes calculated 3D points and features.
+    </description>
+  </class>
+
 </library>
