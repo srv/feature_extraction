@@ -9,14 +9,16 @@
   <node name="feature_extractor_cv_surf" pkg="nodelet" type="nodelet" args="$(arg nodelet_args)" output="screen" >
     <remap from="image" to="$(arg image)" />
     <param name="max_num_key_points" value="50000" />
-    <param name="feature_extractor" value="CvSURF" />
+    <param name="key_point_detector" value="CvSURF" />
+    <param name="descriptor_extractor" value="CvSURF" />
     <param name="show_image" value="true" />
   </node>
 
   <node name="feature_extractor_smart_surf" pkg="nodelet" type="nodelet" args="$(arg nodelet_args)" output="screen" >
     <remap from="image" to="$(arg image)" />
     <param name="max_num_key_points" value="50000" />
-    <param name="feature_extractor" value="SmartSURF" />
+    <param name="key_point_detector" value="SmartSURF" />
+    <param name="descriptor_extractor" value="SmartSURF" />
     <param name="show_image" value="true" />
   </node>
 
