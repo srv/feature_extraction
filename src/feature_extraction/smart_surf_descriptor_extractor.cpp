@@ -16,14 +16,24 @@ void feature_extraction::SmartSurfDescriptorExtractor::extract(
 
   assert(image.type() == CV_8UC3 || image.type() == CV_8U);
 
-  cv::Mat gray_image;
-  if (image.type() == CV_8UC3)
+  cv::Mat input_image;
+  if (!image.isContinuous())
   {
-    cv::cvtColor(image, gray_image, CV_BGR2GRAY);
+    input_image = image.clone();
   }
   else
   {
-    gray_image = image;
+    input_image = image;
+  }
+
+  cv::Mat gray_image;
+  if (input_image.type() == CV_8UC3)
+  {
+    cv::cvtColor(input_image, gray_image, CV_BGR2GRAY);
+  }
+  else
+  {
+    gray_image = input_image;
   }
 
   smart_surf_.init(gray_image);
