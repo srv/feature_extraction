@@ -48,7 +48,6 @@ inline void toMsg(const std::vector<cv::KeyPoint>& key_points,
   if (key_points.size() == 0) return;
 
   assert(descriptors.isContinuous());
-  assert(descriptors.depth() == CV_32F);
   assert(descriptors.channels() == 1);
   assert(descriptors.dims == 2);
 
