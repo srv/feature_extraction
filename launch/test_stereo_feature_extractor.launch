@@ -1,0 +1,23 @@
+<launch>
+
+  <arg name="stereo" default="camera_flex_wide" />
+  <arg name="detector" default="SmartSURF" />
+  <arg name="extractor" default="SmartSURF" />
+
+  <node name="manager" pkg="nodelet" type="nodelet" args="manager" output="screen" />
+
+  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="load feature_extraction/StereoFeatureExtractor manager" output="screen" >
+    <remap from="image_left" to="$(arg stereo)/left/image_rect" />
+    <remap from="image_right" to="$(arg stereo)/right/image_rect" />
+    <remap from="camera_info_left" to="$(arg stereo)/left/camera_info" />
+    <remap from="camera_info_right" to="$(arg stereo)/right/camera_info" />
+    <param name="max_y_diff" value="1.0" />
+    <param name="max_angle_diff" value="5" />
+    <param name="max_size_diff" value="1" />
+    <param name="matching_threshold" value="0.9" />
+    <param name="key_point_detector" value="$(arg detector)" />
+    <param name="descriptor_extractor" value="$(arg extractor)" />
+    <param name="show_image" value="true" />
+  </node>
+
+</launch>
