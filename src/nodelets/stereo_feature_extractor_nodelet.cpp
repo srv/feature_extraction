@@ -248,6 +248,7 @@ public:
     }
   }
 
+  // called by region of interest server
   void setRegionOfInterest(const cv::Rect& roi)
   {
     region_of_interest_ = roi;
@@ -264,7 +265,9 @@ private:
   message_filters::Subscriber<sensor_msgs::Image> sub_l_image_, sub_r_image_;
   message_filters::Subscriber<sensor_msgs::CameraInfo> sub_l_info_, sub_r_info_;
   typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-                                                    sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::CameraInfo> ExactPolicy;
+                                                    sensor_msgs::Image, 
+                                                    sensor_msgs::CameraInfo, 
+                                                    sensor_msgs::CameraInfo> ExactPolicy;
   typedef message_filters::Synchronizer<ExactPolicy> ExactSync;
   boost::shared_ptr<ExactSync> exact_sync_;
   bool subscribed_;   // stores if anyone is subscribed
