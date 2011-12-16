@@ -55,9 +55,9 @@ target_link_libraries(nodelets ${PROJECT_NAME} ${PROJECT_NAME}_ros feature_match
 
 # EXECUTABLES
 rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
-#rosbuild_add_executable(extractor src/tools/extractor.cpp)
-#target_link_libraries(extractor ${PROJECT_NAME})
-#rosbuild_link_boost(extractor program_options)
+rosbuild_add_executable(stereo_extractor src/tools/stereo_extractor.cpp)
+target_link_libraries(stereo_extractor ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(stereo_extractor program_options)
 
 # UNIT TESTS
 rosbuild_add_gtest(key_point_detectors_test test/key_point_detectors_test.cpp)
