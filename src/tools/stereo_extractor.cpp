@@ -66,9 +66,9 @@ int main(int argc, char** argv)
   double max_y_diff = vm["max_y_diff"].as<double>();
   double max_angle_diff = vm["max_angle_diff"].as<double>();
   int max_size_diff = vm["max_size_diff"].as<int>();
+  double matching_threshold = vm["matching_threshold"].as<double>();
   std::string key_point_detector_name = vm["key_point_detector"].as<std::string>();
   std::string descriptor_extractor_name = vm["descriptor_extractor"].as<std::string>();
-  double matching_threshold = vm["matching_threshold"].as<double>();
 
   // create instances
   KeyPointDetector::Ptr key_point_detector =
@@ -136,8 +136,8 @@ int main(int argc, char** argv)
                                      world_point);
     PointType point;
     point.x = world_point.x;
-    point.y = world_point.x;
-    point.z = world_point.x;
+    point.y = world_point.y;
+    point.z = world_point.z;
     point.intensity = image_left.at<unsigned char>(key_points_left[i].pt.y,
         key_points_left[i].pt.x) / 255.0;
     point_cloud->push_back(point);
