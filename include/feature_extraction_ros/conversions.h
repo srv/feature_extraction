@@ -78,6 +78,8 @@ inline void toMsg(const std::vector<cv::KeyPoint> key_points,
                   const std::vector<cv::Point3d> world_points, 
                   vision_msgs::Features3D& features3d_msg)
 {
+  assert(key_points.size() == world_points.size());
+  assert(key_points.size() == static_cast<unsigned int>(descriptors.rows));
   toMsg(key_points, descriptors, features3d_msg.features_left);
   features3d_msg.world_points.resize(world_points.size());
   for (size_t i = 0; i < features3d_msg.world_points.size(); ++i)

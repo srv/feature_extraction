@@ -202,11 +202,17 @@ public:
       feature_matching::StereoDepthEstimator depth_estimator;
       depth_estimator.setCameraInfo(*l_info_msg, *r_info_msg);
       std::vector<cv::Point3d> world_points(matches.size());
+      std::vector<cv::KeyPoint> matched_key_points_left(matches.size());
+      cv::Mat matched_descriptors_left(matches.size(), descriptors_left.cols, descriptors_left.type());
       for (size_t i = 0; i < matches.size(); ++i)
       {
         depth_estimator.calculate3DPoint(key_points_left[matches[i].queryIdx].pt,
                                         key_points_right[matches[i].trainIdx].pt,
                                         world_points[i]);
+        matched_key_points_left[i] = key_points_left[matches[i].queryIdx];
+        cv::Mat descriptor_src = descriptors_left.row(matches[i].queryIdx);
+        cv::Mat descriptor_tgt = matched_descriptors_left.row(i);
+        descriptor_src.copyTo(descriptor_tgt);
       }
 
       // convert to msg format again
@@ -215,7 +221,7 @@ public:
       point_cloud->header = l_info_msg->header;
 
       vision_msgs::Features3D::Ptr features_3d_msg(new vision_msgs::Features3D());
-      feature_extraction_ros::toMsg(key_points_left, descriptors_left,
+      feature_extraction_ros::toMsg(matched_key_points_left, matched_descriptors_left,
                                     world_points, *features_3d_msg);
       features_3d_msg->header = l_info_msg->header;
 
