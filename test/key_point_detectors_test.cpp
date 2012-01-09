@@ -8,7 +8,7 @@
 
 using namespace feature_extraction;
 
-class KeyPointDetectorsTest : public ::testing::TestWithParam<const char*>
+class KeyPointDetectorsTest : public ::testing::TestWithParam<std::string>
 {
 };
 
@@ -29,19 +29,6 @@ TEST_P(KeyPointDetectorsTest, runTest)
       << " key points in " << time << "ms." << std::endl;
 }
 
-const char* detector_names[] = {
-  "SmartSURF",
-  "CvFAST",
-  "CvSTAR",
-  "CvSIFT",
-  "CvSURF",
-  "CvORB",
-  "CvMSER",
-  "CvGFTT",
-  "CvHARRIS",
-  "CvDense",
-  "CvSimpleBlob" };
-
 INSTANTIATE_TEST_CASE_P(KeyPointDetectorsTests, KeyPointDetectorsTest,
-                        ::testing::ValuesIn(detector_names));
+                        ::testing::ValuesIn(KeyPointDetectorFactory::getDetectorNames()));
 

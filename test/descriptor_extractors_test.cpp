@@ -10,7 +10,7 @@
 using namespace feature_extraction;
 
 
-class DescriptorExtractorsTest : public ::testing::TestWithParam<const char*>
+class DescriptorExtractorsTest : public ::testing::TestWithParam<std::string>
 {
 };
 
@@ -62,13 +62,6 @@ TEST_P(DescriptorExtractorsTest, emptyTest)
   EXPECT_EQ(descriptors.cols, 0);
 }
 
-const char* extractor_names[] = {
-  "SmartSURF", 
-  "CvSIFT", 
-  "CvSURF", 
-  "CvORB", 
-  "CvBRIEF" };
-
 INSTANTIATE_TEST_CASE_P(DescriptorExtractorTests, DescriptorExtractorsTest,
-                        ::testing::ValuesIn(extractor_names));
+                        ::testing::ValuesIn(DescriptorExtractorFactory::getExtractorNames()));
 
