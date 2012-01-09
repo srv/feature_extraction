@@ -14,7 +14,7 @@
     <param name="max_y_diff" value="1.0" />
     <param name="max_angle_diff" value="5" />
     <param name="max_size_diff" value="1" />
-    <param name="matching_threshold" value="0.9" />
+    <param name="matching_threshold" value="0.8" />
     <param name="key_point_detector" value="$(arg detector)" />
     <param name="descriptor_extractor" value="$(arg extractor)" />
     <param name="show_image" value="true" />
