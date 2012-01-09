@@ -12,6 +12,11 @@ class KeyPointDetectorFactory
 public:
 
   /**
+   * \return the names of the available detectors
+   */
+  static std::vector<std::string> getDetectorNames();
+
+  /**
    * \param name the name of the detector to create
    * \return pointer to the created detector. If no detector with
    *         given name could be created, the returned pointer is invalid.

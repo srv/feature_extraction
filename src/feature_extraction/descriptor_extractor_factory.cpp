@@ -5,6 +5,17 @@
 #include "feature_extraction/cv_descriptor_extractor.h"
 #include "feature_extraction/smart_surf_descriptor_extractor.h"
 
+std::vector<std::string> feature_extraction::DescriptorExtractorFactory::getExtractorNames()
+{
+  std::vector<std::string> names;
+  names.push_back("SmartSURF");
+  names.push_back("CvSIFT");
+  names.push_back("CvSURF");
+  names.push_back("CvORB");
+  names.push_back("CvBRIEF");
+  return names;
+}
+
 feature_extraction::DescriptorExtractor::Ptr 
 feature_extraction::DescriptorExtractorFactory::create(const std::string& name)
 {

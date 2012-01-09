@@ -12,6 +12,11 @@ class DescriptorExtractorFactory
 public:
 
   /**
+  * \return a list of the available descriptor extractors
+  */
+  static std::vector<std::string> getExtractorNames();
+
+  /**
    * \param name the name of the extractor to create
    * \return pointer to the created extractor. If no extractor with
    *         given name could be created, the returned pointer is invalid.
