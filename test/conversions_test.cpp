@@ -41,18 +41,6 @@ void checkEqual(const cv::KeyPoint& kp_msg, const cv::KeyPoint& kp)
   EXPECT_EQ(kp.octave,      kp.octave);
 }
 
-void checkEqual(const cv::Mat& mat, const std::vector<float>& data)
-{
-  ASSERT_EQ(mat.rows * mat.cols, data.size());
-  ASSERT_EQ(mat.depth(), CV_32F);
-  ASSERT_EQ(mat.channels(), 1);
-  cv::MatConstIterator_<float> it = mat.begin<float>();
-  for (size_t i = 0; i < data.size(); ++i)
-  {
-    EXPECT_NEAR(data[i], *it++, 1e-6);
-  }
-}
-
 TEST(Conversions, keyPointTest)
 {
   vision_msgs::KeyPoint kp_msg;
@@ -72,6 +60,54 @@ TEST(Conversions, keyPointTest)
   feature_extraction_ros::toMsg(kp, kp_msg_copy);
   checkEqual(kp_msg, kp_msg_copy);
 }
+
+class MatTest : public ::testing::TestWithParam<int>
+{
+};
+
+
+TEST_P(MatTest, matTest)
+{
+  cv::Mat mat(20, 30, GetParam());
+  cv::randu(mat, 0, 256);
+
+  vision_msgs::Mat mat_msg;
+  feature_extraction_ros::toMsg(mat, mat_msg);
+
+  EXPECT_EQ(mat_msg.rows, 20);
+  EXPECT_EQ(mat_msg.cols, 30);
+  EXPECT_EQ(mat_msg.type, mat.type());
+
+  ASSERT_EQ(mat_msg.data.size(), 20 * 30 * mat.elemSize());
+
+  unsigned char* mat_data = mat.data;
+  for (size_t i = 0; i < mat_msg.data.size(); ++i)
+  {
+    EXPECT_EQ(mat_msg.data[i], *mat_data);
+    mat_data++;
+  }
+
+  cv::Mat mat_copy;
+  feature_extraction_ros::fromMsg(mat_msg, mat_copy);
+
+  EXPECT_EQ(mat.rows, mat_copy.rows);
+  EXPECT_EQ(mat.cols, mat_copy.cols);
+  EXPECT_EQ(mat.type(), mat_copy.type());
+
+  unsigned char* d1 = mat.data;
+  unsigned char* d2 = mat_copy.data;
+
+  for (size_t i = 0; i < 20 * 30 * mat.elemSize(); ++i)
+  {
+    EXPECT_EQ(*d1, *d2);
+    ++d1;
+    ++d2;
+  }
+  
+}
+
+INSTANTIATE_TEST_CASE_P(MatTests, MatTest,
+                        ::testing::Values(CV_8UC1, CV_32FC1, CV_64FC1));
 
 TEST(Conversions, featuresTest)
 {
@@ -100,8 +136,6 @@ TEST(Conversions, featuresTest)
   {
     checkEqual(features_msg.key_points[i], key_points[i]);
   }
-
-  checkEqual(descriptors, features_msg.descriptor_data);
 
   std::vector<cv::KeyPoint> key_points_copy;
   cv::Mat descriptors_copy;
