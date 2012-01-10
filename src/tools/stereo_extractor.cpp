@@ -147,6 +147,15 @@ int main(int argc, char** argv)
     descriptor_cloud->push_back(descriptor);
   }
 
+  if (vm.count("display"))
+  {
+    cv::Mat canvas;
+    cv::drawMatches(image_left, key_points_left, 
+                    image_right, key_points_right, matches, canvas);
+    cv::imshow("Matches", canvas);
+    cv::waitKey(0);
+  }
+
   if (vm.count("cloud_file"))
   {
     // save pcl

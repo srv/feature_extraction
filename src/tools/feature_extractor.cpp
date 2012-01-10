@@ -63,7 +63,8 @@ int main(int argc, char** argv)
   cv::Mat descriptors;
   descriptor_extractor->extract(image, key_points, descriptors);
 
-  std::cout << "Extracted " << key_points.size() << " descriptors" << std::endl;
+  std::cout << "Extracted " << descriptors.rows << " descriptors." << std::endl;
+  std::cout << "Each descriptor has " << descriptors.cols << " values of " << descriptors.elemSize() << " bytes." << std::endl;
 
   return 0;
 }
