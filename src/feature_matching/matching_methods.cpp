@@ -7,10 +7,20 @@ void feature_matching::matching_methods::thresholdMatching(
     double threshold, const cv::Mat& match_mask,
     std::vector<cv::DMatch>& matches)
 {
+  assert(descriptors1.type() == descriptors2.type());
+  assert(descriptors1.cols == descriptors2.cols);
+
   matches.clear();
   int knn = 2;
-  cv::Ptr<cv::DescriptorMatcher> descriptor_matcher = 
-      cv::DescriptorMatcher::create("BruteForce");
+  cv::Ptr<cv::DescriptorMatcher> descriptor_matcher;
+  if (descriptors1.type() == CV_8U)
+  {
+    descriptor_matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
+  }
+  else
+  {
+    descriptor_matcher = cv::DescriptorMatcher::create("BruteForce");
+  }
   std::vector<std::vector<cv::DMatch> > knn_matches;
   descriptor_matcher->knnMatch(descriptors1, descriptors2,
           knn_matches, knn);
