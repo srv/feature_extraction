@@ -26,8 +26,10 @@ void feature_matching::StereoFeatureMatcher::match(
 
   feature_matching::matching_methods::crossCheckFilter(left_to_right_matches, right_to_left_matches, matches);
 
+  /*
   std::cout << left_to_right_matches.size() << " left to right matches, " << right_to_left_matches.size() << " right to left matches, "
             << matches.size() << " filtered matches." << std::endl;
+  */
 #endif
 
 }

@@ -27,6 +27,25 @@ inline void toMsg(const cv::KeyPoint& kp, vision_msgs::KeyPoint& kp_msg)
   kp_msg.octave = kp.octave;
 }
 
+inline void fromMsg(const vision_msgs::Mat& mat_msg, cv::Mat& mat)
+{
+  mat.create(mat_msg.rows, mat_msg.cols, mat_msg.type);
+  std::copy(mat_msg.data.begin(), mat_msg.data.end(), mat.data);
+}
+
+inline void toMsg(const cv::Mat& mat, vision_msgs::Mat& mat_msg)
+{
+  assert(mat.channels() == 1);
+  assert(mat.dims == 2);
+  assert(mat.isContinuous());
+  mat_msg.rows = mat.rows;
+  mat_msg.cols = mat.cols;
+  mat_msg.type = mat.type();
+  int num_bytes = mat.rows * mat.cols * mat.elemSize();
+  mat_msg.data.resize(num_bytes);
+  std::copy(mat.data, mat.data + num_bytes, mat_msg.data.begin());
+}
+
 inline void fromMsg(const vision_msgs::Features& features_msg, 
                     std::vector<cv::KeyPoint>& key_points, cv::Mat& descriptors)
 {
@@ -37,8 +56,8 @@ inline void fromMsg(const vision_msgs::Features& features_msg,
   {
     fromMsg(features_msg.key_points[i], key_points[i]);
   }
-  descriptors = cv::Mat_<float>(features_msg.descriptor_data);
-  descriptors = descriptors.reshape(0, key_points.size());
+
+  fromMsg(features_msg.descriptor_data, descriptors);
 }
 
 inline void toMsg(const std::vector<cv::KeyPoint>& key_points, 
@@ -47,16 +66,13 @@ inline void toMsg(const std::vector<cv::KeyPoint>& key_points,
 {
   if (key_points.size() == 0) return;
 
-  assert(descriptors.isContinuous());
-  assert(descriptors.channels() == 1);
-  assert(descriptors.dims == 2);
-
   features_msg.key_points.resize(key_points.size());
   for (size_t i = 0; i < features_msg.key_points.size(); ++i)
   {
     toMsg(key_points[i], features_msg.key_points[i]);
   }
-  features_msg.descriptor_data = cv::Mat_<float>(descriptors.reshape(0, 1));
+
+  toMsg(descriptors, features_msg.descriptor_data);
 }
 
 inline void toMsg(const std::vector<cv::Point3d> world_points, 
