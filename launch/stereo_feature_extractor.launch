@@ -1,0 +1,15 @@
+<launch>
+  <arg name="manager" default="stereo_feature_extractor_manager" />
+  <arg name="standalone" default="false" />
+  <arg name="show_image" default="false" />
+  <arg name="stereo" />
+
+  <node if="$(arg standalone)" name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager" output="screen" />
+
+  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="load stereo_feature_extraction/StereoFeatureExtractor $(arg manager)" output="screen" >
+    <remap from="stereo" to="$(arg stereo)" />
+    <param name="show_image" value="$(arg show_image)" />
+    <rosparam file="$(find stereo_feature_extraction)/cfg/stereo_feature_extractor_params.yaml" />
+  </node>
+
+</launch>

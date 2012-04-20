@@ -10,6 +10,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
 rosbuild_init()
+rosbuild_add_boost_directories()
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -19,26 +20,76 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
-#rosbuild_gensrv()
+rosbuild_gensrv()
 
+# LIBRARIES
 rosbuild_add_library(${PROJECT_NAME} 
-    src/feature_extraction/cv_surf_extractor.cpp
-    src/feature_extraction/drawing.cpp
-    src/feature_extraction/feature_extractor_factory.cpp
-    src/feature_extraction/surf.cpp
-    src/feature_extraction/surf_extractor.cpp
+    src/feature_extraction/key_point_detector_factory.cpp
+    src/feature_extraction/descriptor_extractor_factory.cpp
+    src/feature_extraction/cv_key_point_detector.cpp
+    src/feature_extraction/cv_descriptor_extractor.cpp
+    src/feature_extraction/smart_surf.cpp
+    src/feature_extraction/smart_surf_key_point_detector.cpp
+    src/feature_extraction/smart_surf_descriptor_extractor.cpp
+    src/feature_extraction/key_points_filter.cpp
     )
 
 rosbuild_add_library(${PROJECT_NAME}_ros
-    src/feature_extraction_ros/feature_extractor_nodelet.cpp
+    src/feature_extraction_ros/region_of_interest_server.cpp
     )
-target_link_libraries(${PROJECT_NAME}_ros ${PROJECT_NAME})
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+rosbuild_add_library(feature_matching
+    src/feature_matching/matching_methods.cpp
+    src/feature_matching/stereo_feature_matcher.cpp
+    src/feature_matching/stereo_depth_estimator.cpp
+    )
+
+rosbuild_add_library(nodelets
+    src/nodelets/feature_extractor_nodelet.cpp
+    src/nodelets/stereo_feature_matcher_nodelet.cpp
+    src/nodelets/stereo_feature_extractor_nodelet.cpp
+    )
+
+target_link_libraries(nodelets ${PROJECT_NAME} ${PROJECT_NAME}_ros feature_matching)
+
+
+# EXECUTABLES
+rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
+
+rosbuild_add_executable(stereo_extractor src/tools/stereo_extractor.cpp)
+target_link_libraries(stereo_extractor ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(stereo_extractor program_options)
+
+rosbuild_add_executable(feature_extractor src/tools/feature_extractor.cpp)
+target_link_libraries(feature_extractor ${PROJECT_NAME})
+rosbuild_link_boost(feature_extractor program_options)
+
+# UNIT TESTS
+rosbuild_add_gtest(key_point_detectors_test test/key_point_detectors_test.cpp)
+target_link_libraries(key_point_detectors_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(descriptor_extractors_test test/descriptor_extractors_test.cpp)
+target_link_libraries(descriptor_extractors_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(detector_extractor_combinations_test test/detector_extractor_combinations_test.cpp)
+target_link_libraries(detector_extractor_combinations_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(key_points_filter_test test/key_points_filter_test.cpp)
+target_link_libraries(key_points_filter_test ${PROJECT_NAME} gtest_main)
+
+rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
+  
+rosbuild_add_gtest(stereo_feature_matcher_test test/stereo_feature_matcher_test.cpp)
+target_link_libraries(stereo_feature_matcher_test feature_matching)
+
+rosbuild_add_gtest(full_stereo_test test/full_stereo_test.cpp)
+target_link_libraries(full_stereo_test ${PROJECT_NAME} feature_matching)
+
+rosbuild_add_gtest(matching_methods_test test/matching_methods_test.cpp)
+target_link_libraries(matching_methods_test feature_matching)
+
+rosbuild_add_gtest(depth_estimation_test test/depth_estimation_test.cpp)
+target_link_libraries(depth_estimation_test ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(depth_estimation_test system filesystem)
+
 

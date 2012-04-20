@@ -1,0 +1,27 @@
+# artificial calibration
+#
+# focal length is set to 1000 pixels,
+# no distortion,
+# disparity is set to 10, 
+# no rotation between cameras,
+---
+image_width: 1024
+image_height: 768
+camera_name: right
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [1000.0, 0.0, 512.0, 0.0, 1000.0, 394.0, 0.0, 0.0, 1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.0, 0.0, 0.0, 0.0, 0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [1000.0, 0, 512.0, -10, 0, 1000.0, 394.0, 0, 0, 0, 1, 0]

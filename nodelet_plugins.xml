@@ -1,10 +1,26 @@
-<library path="lib/libfeature_extraction_ros">
+<library path="lib/libnodelets">
 
   <class name="feature_extraction/FeatureExtractor" 
          type="feature_extraction_ros::FeatureExtractorNodelet"
          base_class_type="nodelet::Nodelet">
     <description>
         Nodelet for feature extraction
+    </description>
+  </class>
+
+  <class name="feature_extraction/StereoFeatureMatcher" 
+         type="feature_extraction_ros::StereoFeatureMatcherNodelet" 
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet that matches incoming stereo features and publishes calculated 3D points and features.
+    </description>
+  </class>
+
+  <class name="feature_extraction/StereoFeatureExtractor" 
+         type="feature_extraction_ros::StereoFeatureExtractorNodelet" 
+         base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet that extracts features on incoming stereo images and publishes calculated 3D points and features.
     </description>
   </class>
 
