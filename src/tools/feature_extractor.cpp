@@ -2,6 +2,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
+#include <iostream>
+
 #include "feature_extraction/key_point_detector_factory.h"
 #include "feature_extraction/descriptor_extractor_factory.h"
 
@@ -13,7 +15,7 @@ int main(int argc, char** argv)
   // Declare the supported options.
   po::options_description desc("Allowed options");
   desc.add_options()
-    ("image,I", po::value<std::string>()->required(), "input image")
+    ("image,I", po::value<std::string>(), "input image")
     ("key_point_detector,K", po::value<std::string>()->default_value("SmartSURF"), "key point detector")
     ("descriptor_extractor,E", po::value<std::string>()->default_value("SmartSURF"), "descriptor extractor")
   ;
