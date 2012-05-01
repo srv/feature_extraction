@@ -1,15 +1,29 @@
 <launch>
-  <arg name="manager" default="stereo_feature_extractor_manager" />
+  <arg name="manager" default="manager" />
   <arg name="standalone" default="false" />
   <arg name="show_image" default="false" />
   <arg name="stereo" />
+  <arg name="detector" default="SmartSURF" />
+  <arg name="extractor" default="SmartSURF" />
+
+  <arg if="$(arg standalone)" name="nodelet_args" value="standalone feature_extraction/StereoFeatureExtractor" />
+  <arg unless="$(arg standalone)" name="nodelet_args" value="load feature_extraction/StereoFeatureExtractor $(arg manager)" />
 
   <node if="$(arg standalone)" name="$(arg manager)" pkg="nodelet" type="nodelet" args="manager" output="screen" />
 
-  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="load stereo_feature_extraction/StereoFeatureExtractor $(arg manager)" output="screen" >
-    <remap from="stereo" to="$(arg stereo)" />
+  <node name="stereo_feature_extractor" pkg="nodelet" type="nodelet" args="$(arg nodelet_args)" output="screen" >
+    <remap from="image_left" to="$(arg stereo)/left/image_rect" />
+    <remap from="image_right" to="$(arg stereo)/right/image_rect" />
+    <remap from="camera_info_left" to="$(arg stereo)/left/camera_info" />
+    <remap from="camera_info_right" to="$(arg stereo)/right/camera_info" />
+    <param name="max_y_diff" value="1.0" />
+    <param name="max_angle_diff" value="5" />
+    <param name="max_size_diff" value="1" />
+    <param name="matching_threshold" value="0.8" />
+    <param name="key_point_detector" value="$(arg detector)" />
+    <param name="descriptor_extractor" value="$(arg extractor)" />
     <param name="show_image" value="$(arg show_image)" />
-    <rosparam file="$(find stereo_feature_extraction)/cfg/stereo_feature_extractor_params.yaml" />
   </node>
 
 </launch>
+
