@@ -32,6 +32,7 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/smart_surf_key_point_detector.cpp
     src/feature_extraction/smart_surf_descriptor_extractor.cpp
     src/feature_extraction/key_points_filter.cpp
+    src/feature_extraction/features_io.cpp
     )
 
 rosbuild_add_library(${PROJECT_NAME}_ros
@@ -87,6 +88,9 @@ target_link_libraries(full_stereo_test ${PROJECT_NAME} feature_matching)
 
 rosbuild_add_gtest(matching_methods_test test/matching_methods_test.cpp)
 target_link_libraries(matching_methods_test feature_matching)
+
+rosbuild_add_gtest(features_io_test test/features_io_test.cpp)
+target_link_libraries(features_io_test ${PROJECT_NAME} gtest_main)
 
 rosbuild_add_gtest(depth_estimation_test test/depth_estimation_test.cpp)
 target_link_libraries(depth_estimation_test ${PROJECT_NAME} feature_matching)
