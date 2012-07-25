@@ -28,7 +28,7 @@ void feature_matching::matching_methods::thresholdMatching(
   for (size_t m = 0; m < knn_matches.size(); m++ )
   {
     if (knn_matches[m].size() < 2) continue;
-    bool match_allowed = match_mask.at<unsigned char>(
+    bool match_allowed = match_mask.empty() ? true : match_mask.at<unsigned char>(
         knn_matches[m][0].queryIdx, knn_matches[m][0].trainIdx) > 0;
     float dist1 = knn_matches[m][0].distance;
     float dist2 = knn_matches[m][1].distance;
