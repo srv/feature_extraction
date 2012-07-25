@@ -3,17 +3,18 @@
 #include "feature_matching/matching_methods.h"
 
 void feature_matching::matching_methods::thresholdMatching(
-    const cv::Mat& descriptors1, const cv::Mat& descriptors2,
+    const cv::Mat& query_descriptors, const cv::Mat& train_descriptors,
     double threshold, const cv::Mat& match_mask,
     std::vector<cv::DMatch>& matches)
 {
-  assert(descriptors1.type() == descriptors2.type());
-  assert(descriptors1.cols == descriptors2.cols);
+  assert(query_descriptors.type() == train_descriptors.type());
+  assert(query_descriptors.cols == train_descriptors.cols);
 
   matches.clear();
   int knn = 2;
   cv::Ptr<cv::DescriptorMatcher> descriptor_matcher;
-  if (descriptors1.type() == CV_8U)
+  // choose matcher based on feature type
+  if (query_descriptors.type() == CV_8U)
   {
     descriptor_matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
   }
@@ -22,7 +23,7 @@ void feature_matching::matching_methods::thresholdMatching(
     descriptor_matcher = cv::DescriptorMatcher::create("BruteForce");
   }
   std::vector<std::vector<cv::DMatch> > knn_matches;
-  descriptor_matcher->knnMatch(descriptors1, descriptors2,
+  descriptor_matcher->knnMatch(query_descriptors, train_descriptors,
           knn_matches, knn);
 
   for (size_t m = 0; m < knn_matches.size(); m++ )
@@ -60,5 +61,18 @@ void feature_matching::matching_methods::crossCheckFilter(
       }
     }
   }
+}
+
+void feature_matching::matching_methods::crossCheckThresholdMatching(
+  const cv::Mat& query_descriptors, const cv::Mat& train_descriptors,
+  double threshold, const cv::Mat& match_mask,
+  std::vector<cv::DMatch>& matches)
+{
+  std::vector<cv::DMatch> query_to_train_matches;
+  thresholdMatching(query_descriptors, train_descriptors, threshold, match_mask, query_to_train_matches);
+  std::vector<cv::DMatch> train_to_query_matches;
+  thresholdMatching(train_descriptors, query_descriptors, threshold, match_mask.t(), train_to_query_matches);
+
+  crossCheckFilter(query_to_train_matches, train_to_query_matches, matches);
 }
 
