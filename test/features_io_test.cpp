@@ -42,7 +42,7 @@ TEST(FeaturesIOTest, iotest)
   static const int NUM_KEY_POINTS = 1000;
   std::vector<cv::KeyPoint> key_points_left = randomKeyPoints(NUM_KEY_POINTS);
   std::vector<cv::KeyPoint> key_points_right = randomKeyPoints(NUM_KEY_POINTS);
-  std::vector<cv::Point3d> points3d = randomPoints(NUM_KEY_POINTS);
+  std::vector<cv::Point3d> points3d = randomPoints3d(NUM_KEY_POINTS);
 
   cv::Mat descriptors(NUM_KEY_POINTS, 64, CV_32F);
   cv::randu(descriptors, cv::Scalar::all(-128), cv::Scalar::all(128));
