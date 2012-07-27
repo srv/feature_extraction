@@ -9,14 +9,16 @@ namespace features_io
 {
 
 void saveStereoFeatures(const std::string& filename,
-    const std::vector<cv::KeyPoint>& key_points,
+    const std::vector<cv::KeyPoint>& key_points_left,
+    const std::vector<cv::KeyPoint>& key_points_right,
     const cv::Mat& descriptors,
-    const std::vector<cv::Point3d>& world_points);
+    const std::vector<cv::Point3d>& points3d);
 
 void loadStereoFeatures(const std::string& filename, 
-    std::vector<cv::KeyPoint>& key_points,
+    std::vector<cv::KeyPoint>& key_points_left,
+    std::vector<cv::KeyPoint>& key_points_right,
     cv::Mat& descriptors,
-    std::vector<cv::Point3d>& world_points);
+    std::vector<cv::Point3d>& points3d);
 
 }
 

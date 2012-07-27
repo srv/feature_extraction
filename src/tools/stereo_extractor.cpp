@@ -80,8 +80,9 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  // load images (as 1 channel)
+  // load images
   cv::Mat image_left = cv::imread(left_image_file, 0);
+  cv::Mat image_left_rgb = cv::imread(left_image_file, 1);
   cv::Mat image_right = cv::imread(right_image_file, 0);
 
   // extract key points and descriptors
@@ -113,12 +114,13 @@ int main(int argc, char** argv)
   std::cout << "Found " << matches.size() << " matches." << std::endl;
 
   // calculate 3D world points
-  typedef pcl::PointXYZI PointType;
+  typedef pcl::PointXYZRGB PointType;
   typedef pcl::PointCloud<PointType> PointCloud;
   PointCloud::Ptr point_cloud(new PointCloud());
   feature_matching::StereoDepthEstimator depth_estimator;
   depth_estimator.loadCameraInfo(left_calibration_file, right_calibration_file);
-  std::vector<cv::KeyPoint> matched_key_points;
+  std::vector<cv::KeyPoint> matched_key_points_left;
+  std::vector<cv::KeyPoint> matched_key_points_right;
   cv::Mat matched_descriptors;
   std::vector<cv::Point3d> matched_3d_points;
   for (size_t i = 0; i < matches.size(); ++i)
@@ -129,15 +131,19 @@ int main(int argc, char** argv)
     depth_estimator.calculate3DPoint(key_points_left[index_left].pt,
                                      key_points_right[index_right].pt,
                                      world_point);
-    matched_key_points.push_back(key_points_left[index_left]);
+    matched_key_points_left.push_back(key_points_left[index_left]);
+    matched_key_points_right.push_back(key_points_right[index_left]);
     matched_3d_points.push_back(world_point);
     matched_descriptors.push_back(descriptors_left.row(index_left));
     PointType point;
     point.x = world_point.x;
     point.y = world_point.y;
     point.z = world_point.z;
-    point.intensity = image_left.at<unsigned char>(key_points_left[index_left].pt.y,
-        key_points_left[index_left].pt.x) / 255.0;
+    cv::Vec3b color = image_left_rgb.at<cv::Vec3b>(
+        key_points_left[index_left].pt.y, key_points_left[index_left].pt.x);
+    point.r = color[0];
+    point.g = color[1];
+    point.b = color[2];
     point_cloud->push_back(point);
   }
 
@@ -162,7 +168,7 @@ int main(int argc, char** argv)
   {
     std::string filename = vm["output_features_file"].as<std::string>();
     feature_extraction::features_io::saveStereoFeatures(
-        filename, matched_key_points, matched_descriptors, matched_3d_points);
+        filename, matched_key_points_left, matched_key_points_right, matched_descriptors, matched_3d_points);
   }
   return EXIT_SUCCESS;
 }
