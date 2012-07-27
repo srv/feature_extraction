@@ -65,6 +65,14 @@ rosbuild_add_executable(feature_extractor src/tools/feature_extractor.cpp)
 target_link_libraries(feature_extractor ${PROJECT_NAME})
 rosbuild_link_boost(feature_extractor program_options)
 
+rosbuild_add_executable(feature3d_matcher src/tools/feature3d_matcher.cpp)
+target_link_libraries(feature3d_matcher ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(feature3d_matcher program_options)
+
+rosbuild_add_executable(stereo_matcher src/tools/stereo_matcher.cpp)
+target_link_libraries(stereo_matcher feature_matching)
+rosbuild_link_boost(stereo_matcher program_options)
+
 # UNIT TESTS
 rosbuild_add_gtest(key_point_detectors_test test/key_point_detectors_test.cpp)
 target_link_libraries(key_point_detectors_test ${PROJECT_NAME} gtest_main)
