@@ -43,6 +43,7 @@ rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
     src/feature_matching/stereo_feature_matcher.cpp
     src/feature_matching/stereo_depth_estimator.cpp
+    src/feature_matching/estimate_rigid_transformation.cpp
     )
 
 rosbuild_add_library(nodelets

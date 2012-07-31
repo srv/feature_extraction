@@ -53,7 +53,7 @@ def extractAll(folder_path, config):
     image_pairs = collectImagePairs(folder_path)
     for image_pair in image_pairs:
         points_file = "./out/point_clouds/points" + image_pair.numString() + ".pcd"
-        features_file = "./out/point_clouds/features" + image_pair.numString() + ".yaml"
+        features_file = "./out/features/features" + image_pair.numString() + ".yaml"
         cmd = ["rosrun", "feature_extraction", "stereo_extractor"]
         cmd.append("--ileft")
         cmd.append(image_pair.left)
@@ -65,7 +65,7 @@ def extractAll(folder_path, config):
         cmd.append(calibration_set.right)
         cmd.append("--cloud_file")
         cmd.append(points_file)
-        cmd.append("--features_file")
+        cmd.append("--output_features_file")
         cmd.append(features_file)
         for (k, v) in config.items("extractor"):
             cmd.append("--" + k)
@@ -105,6 +105,9 @@ def main(argv):
 
     if not os.path.isdir("./out/point_clouds"):
         os.makedirs("./out/point_clouds")
+
+    if not os.path.isdir("./out/features"):
+        os.makedirs("./out/features")
 
     extractAll(folder_path, config)
 

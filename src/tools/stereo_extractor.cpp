@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 
   // load images
   cv::Mat image_left = cv::imread(left_image_file, 0);
-  cv::Mat image_left_rgb = cv::imread(left_image_file, 1);
+  cv::Mat image_left_bgr = cv::imread(left_image_file, 1);
   cv::Mat image_right = cv::imread(right_image_file, 0);
 
   // extract key points and descriptors
@@ -139,11 +139,11 @@ int main(int argc, char** argv)
     point.x = world_point.x;
     point.y = world_point.y;
     point.z = world_point.z;
-    cv::Vec3b color = image_left_rgb.at<cv::Vec3b>(
+    cv::Vec3b color = image_left_bgr.at<cv::Vec3b>(
         key_points_left[index_left].pt.y, key_points_left[index_left].pt.x);
-    point.r = color[0];
+    point.r = color[2];
     point.g = color[1];
-    point.b = color[2];
+    point.b = color[0];
     point_cloud->push_back(point);
   }
 
@@ -169,6 +169,17 @@ int main(int argc, char** argv)
     std::string filename = vm["output_features_file"].as<std::string>();
     feature_extraction::features_io::saveStereoFeatures(
         filename, matched_key_points_left, matched_key_points_right, matched_descriptors, matched_3d_points);
+    cv::FileStorage fs(filename, cv::FileStorage::APPEND);
+    fs << "image_left" << left_image_file;
+    fs << "image_right" << right_image_file;
+    fs << "calibration_left" << left_calibration_file;
+    fs << "calibration_right" << right_calibration_file;
+    fs << "max_y_diff" << max_y_diff;
+    fs << "max_angle_diff" << max_angle_diff;
+    fs << "max_size_diff" << max_size_diff;
+    fs << "key_point_detector_name" << key_point_detector_name;
+    fs << "descriptor_extractor_name" << descriptor_extractor_name;
+    fs << "matching_threshold" << matching_threshold;
   }
   return EXIT_SUCCESS;
 }
