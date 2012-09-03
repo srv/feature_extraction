@@ -48,15 +48,19 @@ TEST(FeaturesIOTest, iotest)
   cv::randu(descriptors, cv::Scalar::all(-128), cv::Scalar::all(128));
 
   std::string yaml_filename("/tmp/test_features.yaml");
+  std::cout << "Saving to " << yaml_filename << "..." << std::flush;
   features_io::saveStereoFeatures(
       yaml_filename, key_points_left, key_points_right, descriptors, points3d);
+  std::cout << "done." << std::endl;
 
   std::vector<cv::KeyPoint> loaded_key_points_left;
   std::vector<cv::KeyPoint> loaded_key_points_right;
   cv::Mat loaded_descriptors;
   std::vector<cv::Point3d> loaded_points3d;
+  std::cout << "Loading from " << yaml_filename << "..." << std::flush;
   features_io::loadStereoFeatures(
       yaml_filename, loaded_key_points_left, loaded_key_points_right, loaded_descriptors, loaded_points3d);
+  std::cout << "done." << std::endl;
 
   checkEqual(key_points_left, loaded_key_points_left);
   checkEqual(key_points_right, loaded_key_points_right);
