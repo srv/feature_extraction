@@ -1,12 +1,16 @@
-#include <pcl/registration/registration.h>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/eigen.h>
+
+#include <pcl/registration/transformation_estimation_svd.h>
+
 #include <opencv2/core/core.hpp>
 
 #include "feature_matching/estimate_rigid_transformation.h"
 
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+typedef pcl::PointXYZ PointType;
+typedef pcl::PointCloud<PointType> PointCloud;
 
 PointCloud toPcl_(const std::vector<cv::Point3d>& points)
 {
@@ -86,11 +90,12 @@ bool feature_matching::estimateRigidTransformation(
   float lowest_error = 0.0;
   Eigen::Matrix4f transformation;
   PointCloud source_cloud_transformed;
+  pcl::registration::TransformationEstimationSVD<PointType, PointType> transformation_estimator;
   for (int i_iter = 0; i_iter < max_iterations; ++i_iter)
   {
     int nr_samples = 3;
     drawSamples_(source_cloud, nr_samples, min_sample_distance, sample_indices);
-    estimateRigidTransformationSVD(source_cloud, sample_indices, target_cloud, sample_indices, transformation);
+    transformation_estimator.estimateRigidTransformation(source_cloud, sample_indices, target_cloud, sample_indices, transformation);
     transformPointCloud(source_cloud, source_cloud_transformed, transformation);
 
     // compute error
@@ -144,7 +149,7 @@ bool feature_matching::estimateRigidTransformation(
       inliers.push_back(0);
     }
   }
-  estimateRigidTransformationSVD(source_cloud, inlier_indices, target_cloud, inlier_indices, final_transformation);
+  transformation_estimator.estimateRigidTransformation(source_cloud, inlier_indices, target_cloud, inlier_indices, final_transformation);
 
   transform.create(3, 4, CV_64F);
   for (int y = 0; y < 3; ++y)
