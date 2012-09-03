@@ -30,6 +30,8 @@ std::vector<Params> generateParams()
   {
     for (size_t j = 0; j < extractor_names.size(); ++j)
     {
+      if (detector_names[i] == "CvSIFT" && extractor_names[i] == "CvORB")
+        continue; // there seems to be sum bug in OpenCV
       Params p;
       p.detector_name = detector_names[i];
       p.extractor_name = extractor_names[j];
