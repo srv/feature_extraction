@@ -2,6 +2,8 @@
 #include <cassert>
 #include "feature_extraction/features_io.h"
 
+#include <iostream>
+
 
 void feature_extraction::features_io::saveStereoFeatures(
     const std::string& filename,
@@ -14,11 +16,12 @@ void feature_extraction::features_io::saveStereoFeatures(
   assert(key_points_left.size() == points3d.size());
   assert(static_cast<int>(key_points_left.size()) == descriptors.rows);
   cv::FileStorage fs(filename, cv::FileStorage::WRITE);
-  fs << "version" << 1;
+  fs << "version" << 2;
   cv::write(fs, "key_points_left", key_points_left);
   cv::write(fs, "key_points_right", key_points_right);
   fs << "descriptors" << descriptors;
-  fs << "points3d" << "[:" << points3d << "]";
+  cv::Mat points3d_mat(points3d);
+  fs << "points3d" << points3d_mat;
 }
 
 void feature_extraction::features_io::loadStereoFeatures(
@@ -37,6 +40,15 @@ void feature_extraction::features_io::loadStereoFeatures(
     cv::read(fs["key_points_right"], key_points_right);
     fs["descriptors"] >> descriptors;
     fs["points3d"] >> points3d;
+  }
+  else if (version == 2)
+  {
+    cv::read(fs["key_points_left"], key_points_left);
+    cv::read(fs["key_points_right"], key_points_right);
+    fs["descriptors"] >> descriptors;
+    cv::Mat points3d_mat;
+    fs["points3d"] >> points3d_mat;
+    points3d_mat.copyTo(points3d);
   }
   else
   {
