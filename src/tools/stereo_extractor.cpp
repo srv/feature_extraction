@@ -4,7 +4,6 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <image_geometry/stereo_camera_model.h>
 
-
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -13,14 +12,7 @@
 #include "feature_matching/stereo_depth_estimator.h"
 #include "feature_extraction/key_point_detector_factory.h"
 #include "feature_extraction/descriptor_extractor_factory.h"
-
-struct Descriptor
-{
-  float data[64];
-  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-} EIGEN_ALIGN16;
-
-POINT_CLOUD_REGISTER_POINT_STRUCT (Descriptor, (float[64], data, data))
+#include "feature_extraction/features_io.h"
 
 using namespace feature_extraction;
 namespace po = boost::program_options;
@@ -37,11 +29,11 @@ int main(int argc, char** argv)
     ("max_y_diff,Y", po::value<double>()->default_value(2.0), "maximum y difference for matching keypoints")
     ("max_angle_diff,A", po::value<double>()->default_value(4.0), "maximum angle difference for matching keypoints")
     ("max_size_diff,S", po::value<int>()->default_value(5), "maximum size difference for matching keypoints")
-    ("key_point_detector,K", po::value<std::string>()->default_value("SmartSURF"), "key point detector")
+    ("key_point_detector,D", po::value<std::string>()->default_value("SmartSURF"), "key point detector")
     ("descriptor_extractor,E", po::value<std::string>()->default_value("SmartSURF"), "descriptor extractor")
     ("matching_threshold,T", po::value<double>()->default_value(0.8), "matching threshold")
-    ("cloud_file,C", po::value<std::string>(), "file name for output point cloud")
-    ("descriptor_file,D", po::value<std::string>(), "file name for output descriptors")
+    ("cloud_file,C", po::value<std::string>(), "file name for output feature PCD point cloud")
+    ("output_features_file,O", po::value<std::string>(), "file name for output (key points, descriptors, 3D points)")
     ("display", "display matching output (blocks while window is open)")
   ;
 
@@ -55,7 +47,7 @@ int main(int argc, char** argv)
     std::cerr << "Error parsing program options: " << std::endl;
     std::cerr << "  " << error.what() << std::endl;
     std::cerr << desc << std::endl;
-    return -1;
+    return EXIT_FAILURE;
   }
 
   // extract params
@@ -66,9 +58,9 @@ int main(int argc, char** argv)
   double max_y_diff = vm["max_y_diff"].as<double>();
   double max_angle_diff = vm["max_angle_diff"].as<double>();
   int max_size_diff = vm["max_size_diff"].as<int>();
-  double matching_threshold = vm["matching_threshold"].as<double>();
   std::string key_point_detector_name = vm["key_point_detector"].as<std::string>();
   std::string descriptor_extractor_name = vm["descriptor_extractor"].as<std::string>();
+  double matching_threshold = vm["matching_threshold"].as<double>();
 
   // create instances
   KeyPointDetector::Ptr key_point_detector =
@@ -77,7 +69,7 @@ int main(int argc, char** argv)
   {
     std::cerr << "Cannot create key point detector with name '"
               << key_point_detector_name << "'" << std::endl;
-    return -2;
+    return EXIT_FAILURE;
   }
   DescriptorExtractor::Ptr descriptor_extractor =
     DescriptorExtractorFactory::create(descriptor_extractor_name);
@@ -85,11 +77,12 @@ int main(int argc, char** argv)
   {
     std::cerr << "Cannot create descriptor extractor with name '"
               << descriptor_extractor_name << "'" << std::endl;
-    return -2;
+    return EXIT_FAILURE;
   }
 
-  // load images (as 1 channel)
+  // load images
   cv::Mat image_left = cv::imread(left_image_file, 0);
+  cv::Mat image_left_bgr = cv::imread(left_image_file, 1);
   cv::Mat image_right = cv::imread(right_image_file, 0);
 
   // extract key points and descriptors
@@ -121,30 +114,37 @@ int main(int argc, char** argv)
   std::cout << "Found " << matches.size() << " matches." << std::endl;
 
   // calculate 3D world points
-  typedef pcl::PointXYZI PointType;
+  typedef pcl::PointXYZRGB PointType;
   typedef pcl::PointCloud<PointType> PointCloud;
   PointCloud::Ptr point_cloud(new PointCloud());
-  typedef pcl::PointCloud<Descriptor> DescriptorCloud;
-  DescriptorCloud::Ptr descriptor_cloud(new DescriptorCloud());
   feature_matching::StereoDepthEstimator depth_estimator;
   depth_estimator.loadCameraInfo(left_calibration_file, right_calibration_file);
+  std::vector<cv::KeyPoint> matched_key_points_left;
+  std::vector<cv::KeyPoint> matched_key_points_right;
+  cv::Mat matched_descriptors;
+  std::vector<cv::Point3d> matched_3d_points;
   for (size_t i = 0; i < matches.size(); ++i)
   {
+    int index_left = matches[i].queryIdx;
+    int index_right = matches[i].trainIdx;
     cv::Point3d world_point;
-    depth_estimator.calculate3DPoint(key_points_left[matches[i].queryIdx].pt,
-                                     key_points_right[matches[i].trainIdx].pt,
+    depth_estimator.calculate3DPoint(key_points_left[index_left].pt,
+                                     key_points_right[index_right].pt,
                                      world_point);
+    matched_key_points_left.push_back(key_points_left[index_left]);
+    matched_key_points_right.push_back(key_points_right[index_left]);
+    matched_3d_points.push_back(world_point);
+    matched_descriptors.push_back(descriptors_left.row(index_left));
     PointType point;
     point.x = world_point.x;
     point.y = world_point.y;
     point.z = world_point.z;
-    point.intensity = image_left.at<unsigned char>(key_points_left[i].pt.y,
-        key_points_left[i].pt.x) / 255.0;
+    cv::Vec3b color = image_left_bgr.at<cv::Vec3b>(
+        key_points_left[index_left].pt.y, key_points_left[index_left].pt.x);
+    point.r = color[2];
+    point.g = color[1];
+    point.b = color[0];
     point_cloud->push_back(point);
-    
-    Descriptor descriptor;
-    std::copy(descriptors_left.ptr(i), descriptors_left.ptr(i) + descriptors_left.cols, descriptor.data);
-    descriptor_cloud->push_back(descriptor);
   }
 
   if (vm.count("display"))
@@ -152,6 +152,7 @@ int main(int argc, char** argv)
     cv::Mat canvas;
     cv::drawMatches(image_left, key_points_left, 
                     image_right, key_points_right, matches, canvas);
+    cv::namedWindow("Matches", 0);
     cv::imshow("Matches", canvas);
     cv::waitKey(0);
   }
@@ -163,11 +164,23 @@ int main(int argc, char** argv)
     pcl::io::savePCDFile(file_name, *point_cloud);
   }
 
-  if (vm.count("descriptor_file"))
+  if (vm.count("output_features_file"))
   {
-    std::string file_name = vm["descriptor_file"].as<std::string>();
-    pcl::io::savePCDFile(file_name, *descriptor_cloud);
+    std::string filename = vm["output_features_file"].as<std::string>();
+    feature_extraction::features_io::saveStereoFeatures(
+        filename, matched_key_points_left, matched_key_points_right, matched_descriptors, matched_3d_points);
+    cv::FileStorage fs(filename, cv::FileStorage::APPEND);
+    fs << "image_left" << left_image_file;
+    fs << "image_right" << right_image_file;
+    fs << "calibration_left" << left_calibration_file;
+    fs << "calibration_right" << right_calibration_file;
+    fs << "max_y_diff" << max_y_diff;
+    fs << "max_angle_diff" << max_angle_diff;
+    fs << "max_size_diff" << max_size_diff;
+    fs << "key_point_detector_name" << key_point_detector_name;
+    fs << "descriptor_extractor_name" << descriptor_extractor_name;
+    fs << "matching_threshold" << matching_threshold;
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
 

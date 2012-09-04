@@ -16,22 +16,8 @@ void feature_matching::StereoFeatureMatcher::match(
       descriptors_left.rows == 0 || descriptors_right.rows == 0) return;
   cv::Mat match_mask;
   computeMatchMask(key_points_left, key_points_right, match_mask);
-#if 0
-  feature_matching::matching_methods::thresholdMatching(descriptors_left, descriptors_right, matching_threshold, match_mask, matches);
-#else
-  std::vector<cv::DMatch> left_to_right_matches;
-  feature_matching::matching_methods::thresholdMatching(descriptors_left, descriptors_right, matching_threshold, match_mask, left_to_right_matches);
-  std::vector<cv::DMatch> right_to_left_matches;
-  feature_matching::matching_methods::thresholdMatching(descriptors_right, descriptors_left, matching_threshold, match_mask.t(), right_to_left_matches);
-
-  feature_matching::matching_methods::crossCheckFilter(left_to_right_matches, right_to_left_matches, matches);
-
-  /*
-  std::cout << left_to_right_matches.size() << " left to right matches, " << right_to_left_matches.size() << " right to left matches, "
-            << matches.size() << " filtered matches." << std::endl;
-  */
-#endif
-
+  feature_matching::matching_methods::crossCheckThresholdMatching(
+      descriptors_left, descriptors_right, matching_threshold, match_mask, matches);
 }
 
 void feature_matching::StereoFeatureMatcher::computeMatchMask(

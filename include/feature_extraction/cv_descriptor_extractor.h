@@ -43,6 +43,8 @@ protected:
 
   cv::Ptr<cv::DescriptorExtractor> cv_extractor_;
 
+  static bool nonfree_module_initialized_;
+
 };
 
 }

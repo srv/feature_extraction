@@ -2,6 +2,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
+#include <iostream>
+
 #include "feature_extraction/key_point_detector_factory.h"
 #include "feature_extraction/descriptor_extractor_factory.h"
 
@@ -16,6 +18,7 @@ int main(int argc, char** argv)
     ("image,I", po::value<std::string>()->required(), "input image")
     ("key_point_detector,K", po::value<std::string>()->default_value("SmartSURF"), "key point detector")
     ("descriptor_extractor,E", po::value<std::string>()->default_value("SmartSURF"), "descriptor extractor")
+    ("outfile,O", po::value<std::string>(), "output file to store features")
   ;
 
   po::variables_map vm;
@@ -65,7 +68,15 @@ int main(int argc, char** argv)
 
   std::cout << "Extracted " << descriptors.rows << " descriptors." << std::endl;
   std::cout << "Each descriptor has " << descriptors.cols << " values of " << descriptors.elemSize() << " bytes." << std::endl;
-
+  if (vm.count("outfile"))
+  {
+    std::string filename = vm["outfile"].as<std::string>();
+    cv::FileStorage fs(filename, cv::FileStorage::WRITE);
+    fs << "feature_detector" << key_point_detector_name;
+    fs << "descriptor_extractor" << descriptor_extractor_name;
+    cv::write(fs, "key_points", key_points);
+    fs << "descriptors" << descriptors;
+  }
   return 0;
 }
 

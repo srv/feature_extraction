@@ -39,6 +39,8 @@ protected:
 
   cv::Ptr<cv::FeatureDetector> cv_detector_;
 
+  static bool nonfree_module_initialized_;
+
 };
 
 }

@@ -6,6 +6,7 @@
 #include <vision_msgs/Features3D.h>
 
 #include "feature_extraction_ros/conversions.h"
+#include "check_equal.h"
 
 // msg - cv
 void checkEqual(const vision_msgs::KeyPoint& kp_msg, const cv::KeyPoint& kp)
@@ -28,17 +29,6 @@ void checkEqual(const vision_msgs::KeyPoint& kp_msg_1, const vision_msgs::KeyPoi
   EXPECT_NEAR( kp_msg_1.response, kp_msg_2.response, 1e-6);
   EXPECT_EQ(kp_msg_1.octave,      kp_msg_2.octave);
   // laplacian not checked here because cv::KeyPoint does not have it
-}
-
-// cv - cv
-void checkEqual(const cv::KeyPoint& kp_msg, const cv::KeyPoint& kp)
-{
-  EXPECT_NEAR( kp.pt.x,     kp.pt.x, 1e-6);
-  EXPECT_NEAR( kp.pt.y,     kp.pt.y, 1e-6);
-  EXPECT_NEAR( kp.size,     kp.size, 1e-6);
-  EXPECT_NEAR( kp.angle,    kp.angle, 1e-6);
-  EXPECT_NEAR( kp.response, kp.response, 1e-6);
-  EXPECT_EQ(kp.octave,      kp.octave);
 }
 
 TEST(Conversions, keyPointTest)
@@ -90,20 +80,7 @@ TEST_P(MatTest, matTest)
   cv::Mat mat_copy;
   feature_extraction_ros::fromMsg(mat_msg, mat_copy);
 
-  EXPECT_EQ(mat.rows, mat_copy.rows);
-  EXPECT_EQ(mat.cols, mat_copy.cols);
-  EXPECT_EQ(mat.type(), mat_copy.type());
-
-  unsigned char* d1 = mat.data;
-  unsigned char* d2 = mat_copy.data;
-
-  for (size_t i = 0; i < 20 * 30 * mat.elemSize(); ++i)
-  {
-    EXPECT_EQ(*d1, *d2);
-    ++d1;
-    ++d2;
-  }
-  
+  checkEqual(mat, mat_copy);
 }
 
 INSTANTIATE_TEST_CASE_P(MatTests, MatTest,
@@ -141,22 +118,8 @@ TEST(Conversions, featuresTest)
   cv::Mat descriptors_copy;
   feature_extraction_ros::fromMsg(features_msg, key_points_copy, descriptors_copy);
 
-  ASSERT_EQ(key_points.size(), key_points_copy.size());
-  for (size_t i = 0; i < key_points.size(); ++i)
-  {
-    checkEqual(key_points[i], key_points_copy[i]);
-  }
-
-  ASSERT_EQ(descriptors.rows, descriptors_copy.rows);
-  ASSERT_EQ(descriptors.cols, descriptors_copy.cols);
-
-  cv::MatConstIterator_<float> it1 = descriptors.begin<float>();
-  cv::MatConstIterator_<float> it2 = descriptors_copy.begin<float>();
-
-  while (it1 != descriptors.end<float>())
-  {
-    EXPECT_NEAR(*it1++, *it2++, 1e-6);
-  }
+  checkEqual(key_points, key_points_copy);
+  checkEqual(descriptors, descriptors_copy);
 }
 
 TEST(Conversions, emptyTest)

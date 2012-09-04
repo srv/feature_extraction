@@ -32,6 +32,7 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/smart_surf_key_point_detector.cpp
     src/feature_extraction/smart_surf_descriptor_extractor.cpp
     src/feature_extraction/key_points_filter.cpp
+    src/feature_extraction/features_io.cpp
     )
 
 rosbuild_add_library(${PROJECT_NAME}_ros
@@ -42,6 +43,7 @@ rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
     src/feature_matching/stereo_feature_matcher.cpp
     src/feature_matching/stereo_depth_estimator.cpp
+    src/feature_matching/estimate_rigid_transformation.cpp
     )
 
 rosbuild_add_library(nodelets
@@ -63,6 +65,14 @@ rosbuild_link_boost(stereo_extractor program_options)
 rosbuild_add_executable(feature_extractor src/tools/feature_extractor.cpp)
 target_link_libraries(feature_extractor ${PROJECT_NAME})
 rosbuild_link_boost(feature_extractor program_options)
+
+rosbuild_add_executable(feature3d_matcher src/tools/feature3d_matcher.cpp)
+target_link_libraries(feature3d_matcher ${PROJECT_NAME} feature_matching)
+rosbuild_link_boost(feature3d_matcher program_options)
+
+rosbuild_add_executable(stereo_matcher src/tools/stereo_matcher.cpp)
+target_link_libraries(stereo_matcher feature_matching)
+rosbuild_link_boost(stereo_matcher program_options)
 
 # UNIT TESTS
 rosbuild_add_gtest(key_point_detectors_test test/key_point_detectors_test.cpp)
@@ -87,6 +97,9 @@ target_link_libraries(full_stereo_test ${PROJECT_NAME} feature_matching)
 
 rosbuild_add_gtest(matching_methods_test test/matching_methods_test.cpp)
 target_link_libraries(matching_methods_test feature_matching)
+
+rosbuild_add_gtest(features_io_test test/features_io_test.cpp)
+target_link_libraries(features_io_test ${PROJECT_NAME} gtest_main)
 
 rosbuild_add_gtest(depth_estimation_test test/depth_estimation_test.cpp)
 target_link_libraries(depth_estimation_test ${PROJECT_NAME} feature_matching)
