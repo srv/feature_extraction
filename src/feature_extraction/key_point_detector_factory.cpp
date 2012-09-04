@@ -18,7 +18,7 @@ std::vector<std::string> feature_extraction::KeyPointDetectorFactory::getDetecto
   names.push_back("CvGFTT");
   names.push_back("CvHARRIS");
   // names.push_back("CvDense"); // silly "detector"
-  names.push_back("CvSimpleBlob");
+  // names.push_back("CvSimpleBlob");
   return names;
 }
 
