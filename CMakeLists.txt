@@ -20,7 +20,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #uncomment if you have defined messages
 #rosbuild_genmsg()
 #uncomment if you have defined services
-rosbuild_gensrv()
+#rosbuild_gensrv()
 
 # LIBRARIES
 rosbuild_add_library(${PROJECT_NAME} 
@@ -35,10 +35,6 @@ rosbuild_add_library(${PROJECT_NAME}
     src/feature_extraction/features_io.cpp
     )
 
-rosbuild_add_library(${PROJECT_NAME}_ros
-    src/feature_extraction_ros/region_of_interest_server.cpp
-    )
-
 rosbuild_add_library(feature_matching
     src/feature_matching/matching_methods.cpp
     src/feature_matching/stereo_feature_matcher.cpp
@@ -46,17 +42,7 @@ rosbuild_add_library(feature_matching
     src/feature_matching/estimate_rigid_transformation.cpp
     )
 
-rosbuild_add_library(nodelets
-    src/nodelets/feature_extractor_nodelet.cpp
-    src/nodelets/stereo_feature_matcher_nodelet.cpp
-    src/nodelets/stereo_feature_extractor_nodelet.cpp
-    )
-
-target_link_libraries(nodelets ${PROJECT_NAME} ${PROJECT_NAME}_ros feature_matching)
-
-
 # EXECUTABLES
-rosbuild_add_executable(plane_fitting_node src/nodes/plane_fitting_node.cpp)
 
 rosbuild_add_executable(stereo_extractor src/tools/stereo_extractor.cpp)
 target_link_libraries(stereo_extractor ${PROJECT_NAME} feature_matching)
@@ -87,8 +73,6 @@ target_link_libraries(detector_extractor_combinations_test ${PROJECT_NAME} gtest
 rosbuild_add_gtest(key_points_filter_test test/key_points_filter_test.cpp)
 target_link_libraries(key_points_filter_test ${PROJECT_NAME} gtest_main)
 
-rosbuild_add_gtest(conversions_test test/conversions_test.cpp)
-  
 rosbuild_add_gtest(stereo_feature_matcher_test test/stereo_feature_matcher_test.cpp)
 target_link_libraries(stereo_feature_matcher_test feature_matching)
 
