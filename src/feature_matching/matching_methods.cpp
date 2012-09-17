@@ -7,11 +7,13 @@ void feature_matching::matching_methods::thresholdMatching(
     double threshold, const cv::Mat& match_mask,
     std::vector<cv::DMatch>& matches)
 {
+  matches.clear();
+  if (query_descriptors.empty() || train_descriptors.empty())
+    return;
   assert(query_descriptors.type() == train_descriptors.type());
   assert(query_descriptors.cols == train_descriptors.cols);
 
-  matches.clear();
-  int knn = 2;
+  const int knn = 2;
   cv::Ptr<cv::DescriptorMatcher> descriptor_matcher;
   // choose matcher based on feature type
   if (query_descriptors.type() == CV_8U)
