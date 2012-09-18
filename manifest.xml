@@ -20,13 +20,9 @@
   <depend package="camera_calibration_parsers" />
 
   <export>
-    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfeature_extraction -lfeature_extraction_ros" />
-    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lfeature_extraction -lfeature_extraction_ros -lfeature_matching" />
   </export>
 
-  <export>
-    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
-  </export>
 </package>
 
 

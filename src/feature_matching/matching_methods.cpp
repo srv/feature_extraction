@@ -7,11 +7,13 @@ void feature_matching::matching_methods::thresholdMatching(
     double threshold, const cv::Mat& match_mask,
     std::vector<cv::DMatch>& matches)
 {
+  matches.clear();
+  if (query_descriptors.empty() || train_descriptors.empty())
+    return;
   assert(query_descriptors.type() == train_descriptors.type());
   assert(query_descriptors.cols == train_descriptors.cols);
 
-  matches.clear();
-  int knn = 2;
+  const int knn = 2;
   cv::Ptr<cv::DescriptorMatcher> descriptor_matcher;
   // choose matcher based on feature type
   if (query_descriptors.type() == CV_8U)
@@ -71,7 +73,9 @@ void feature_matching::matching_methods::crossCheckThresholdMatching(
   std::vector<cv::DMatch> query_to_train_matches;
   thresholdMatching(query_descriptors, train_descriptors, threshold, match_mask, query_to_train_matches);
   std::vector<cv::DMatch> train_to_query_matches;
-  thresholdMatching(train_descriptors, query_descriptors, threshold, match_mask.t(), train_to_query_matches);
+  cv::Mat match_mask_t;
+  if (!match_mask.empty()) match_mask_t = match_mask.t();
+  thresholdMatching(train_descriptors, query_descriptors, threshold, match_mask_t, train_to_query_matches);
 
   crossCheckFilter(query_to_train_matches, train_to_query_matches, matches);
 }
