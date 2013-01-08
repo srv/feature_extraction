@@ -1,4 +1,5 @@
 #include <boost/program_options.hpp>
+#include <boost/progress.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <sensor_msgs/CameraInfo.h>
@@ -87,14 +88,30 @@ int main(int argc, char** argv)
 
   // extract key points and descriptors
   std::vector<cv::KeyPoint> key_points_left;
-  key_point_detector->detect(image_left, key_points_left);
+  {
+    boost::progress_timer t;
+    key_point_detector->detect(image_left, key_points_left);
+    std::cout << "Detection left: ";
+  }
   cv::Mat descriptors_left;
-  descriptor_extractor->extract(image_left, key_points_left, descriptors_left);
+  {
+    boost::progress_timer t;
+    descriptor_extractor->extract(image_left, key_points_left, descriptors_left);
+    std::cout << "Extraction left: ";
+  }
 
   std::vector<cv::KeyPoint> key_points_right;
-  key_point_detector->detect(image_right, key_points_right);
+  {
+    boost::progress_timer t;
+    key_point_detector->detect(image_right, key_points_right);
+    std::cout << "Detection right: ";
+  }
   cv::Mat descriptors_right;
-  descriptor_extractor->extract(image_right, key_points_right, descriptors_right);
+  {
+    boost::progress_timer t;
+    descriptor_extractor->extract(image_right, key_points_right, descriptors_right);
+    std::cout << "Extractino right: ";
+  }
 
   std::cout << "Extracted " << key_points_left.size() << " descriptors from left image" << std::endl;
   std::cout << "Extracted " << key_points_right.size() << " descriptors from right image" << std::endl;
@@ -108,8 +125,12 @@ int main(int argc, char** argv)
   feature_matching::StereoFeatureMatcher matcher;
   matcher.setParams(params);
   std::vector<cv::DMatch> matches;
-  matcher.match(key_points_left, descriptors_left, key_points_right,
-                descriptors_right, matching_threshold, matches);
+  {
+    boost::progress_timer t;
+    matcher.match(key_points_left, descriptors_left, key_points_right,
+                 descriptors_right, matching_threshold, matches);
+    std::cout << "Matching: ";
+  }
 
   std::cout << "Found " << matches.size() << " matches." << std::endl;
 
@@ -123,28 +144,32 @@ int main(int argc, char** argv)
   std::vector<cv::KeyPoint> matched_key_points_right;
   cv::Mat matched_descriptors;
   std::vector<cv::Point3d> matched_3d_points;
-  for (size_t i = 0; i < matches.size(); ++i)
   {
-    int index_left = matches[i].queryIdx;
-    int index_right = matches[i].trainIdx;
-    cv::Point3d world_point;
-    depth_estimator.calculate3DPoint(key_points_left[index_left].pt,
-                                     key_points_right[index_right].pt,
-                                     world_point);
-    matched_key_points_left.push_back(key_points_left[index_left]);
-    matched_key_points_right.push_back(key_points_right[index_left]);
-    matched_3d_points.push_back(world_point);
-    matched_descriptors.push_back(descriptors_left.row(index_left));
-    PointType point;
-    point.x = world_point.x;
-    point.y = world_point.y;
-    point.z = world_point.z;
-    cv::Vec3b color = image_left_bgr.at<cv::Vec3b>(
-        key_points_left[index_left].pt.y, key_points_left[index_left].pt.x);
-    point.r = color[2];
-    point.g = color[1];
-    point.b = color[0];
-    point_cloud->push_back(point);
+    boost::progress_timer t;
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+      int index_left = matches[i].queryIdx;
+      int index_right = matches[i].trainIdx;
+      cv::Point3d world_point;
+      depth_estimator.calculate3DPoint(key_points_left[index_left].pt,
+                                      key_points_right[index_right].pt,
+                                      world_point);
+      matched_key_points_left.push_back(key_points_left[index_left]);
+      matched_key_points_right.push_back(key_points_right[index_left]);
+      matched_3d_points.push_back(world_point);
+      matched_descriptors.push_back(descriptors_left.row(index_left));
+      PointType point;
+      point.x = world_point.x;
+      point.y = world_point.y;
+      point.z = world_point.z;
+      cv::Vec3b color = image_left_bgr.at<cv::Vec3b>(
+          key_points_left[index_left].pt.y, key_points_left[index_left].pt.x);
+      point.r = color[2];
+      point.g = color[1];
+      point.b = color[0];
+      point_cloud->push_back(point);
+    }
+    std::cout << "Reconstruction: ";
   }
 
   if (vm.count("display"))
