@@ -1,7 +1,7 @@
 <package>
   <description brief="feature_extraction">
 
-     Package for feature extraction and matching
+     Package for feature extraction and matching.
 
   </description>
   <author>Stephan Wirth</author>
