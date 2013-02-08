@@ -32,17 +32,11 @@ There is also a special matcher for matching left to right images in a calibrate
 feature_matching::StereoFeatureMatcher that preserves the epipolar constraints during matching and a
 class that calculates 3D point coordinates for stereo matches, called feature_matching::StereoDepthEstimator.
 
-
-<!--
-Provide links to specific auto-generated API documentation within your
-package that is of particular interest to a reader. Doxygen will
-document pretty much every part of your code, so do your best here to
-point the reader to the actual API.
-
-If your codebase is fairly large or has different sets of APIs, you
-should use the doxygen 'group' tag to keep these APIs together. For
-example, the roscpp documentation has 'libros' group.
--->
-
+\subsection unittests Unit Tests
+This library has a set of unit tests that can be invoked by running:
+\verbatim
+  make test
+\endverbatim
+The tests reside in the test/ directory. Make sure to run all tests and understand the output after changing something.
 
 */
