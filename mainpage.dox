@@ -2,14 +2,36 @@
 \mainpage
 \htmlinclude manifest.html
 
-\b feature_extraction is ... 
+This package is a small library package providing methods for feature extraction and matching.
 
-<!-- 
-Provide an overview of your package.
--->
+This package contains mainly interface definitions for keypoint detectors and descriptor extractors.
+It contains wrappers for OpenCV functions that implement these interfaces and the SmartSURF implementation.
 
+It also contains methods for feature matching, stereo feature matching and motion estimation from matches.
 
 \section codeapi Code API
+
+\subsection feature_extraction Feature Extraction
+
+feature_extraction::KeyPointDetector defines the interface for key point detectors.
+
+feature_extraction::DescriptorExtractor defines the interface for descriptor extractors.
+
+Both classes have factory methods implemented in feature_extraction::KeyPointDetectorFactory and 
+feature_extraction::DescriptorExtractorFactory that allow easy creation of instances giving just a
+name as string. See the implementation of feature_extraction::KeyPointDetectorFactory::getDetectorNames() and
+feature_extraction::DescriptorExtractorFactory::getExtractorNames() to get a list of available detectors
+and extractors.
+
+\subsection feature_matching Feature Matching
+
+The available methods for feature matching are feature_matching::matching_methods::thresholdMatching and
+feature_matching::matching_methods::crossCheckThresholdMatching.
+
+There is also a special matcher for matching left to right images in a calibrated stereo system, called
+feature_matching::StereoFeatureMatcher that preserves the epipolar constraints during matching and a
+class that calculates 3D point coordinates for stereo matches, called feature_matching::StereoDepthEstimator.
+
 
 <!--
 Provide links to specific auto-generated API documentation within your
