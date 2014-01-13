@@ -5,20 +5,20 @@ find_package(catkin REQUIRED COMPONENTS
 	roscpp
 	rospy
 	pcl_ros 
-	OpenCV
 	cv_bridge 
 	image_transport 
 	image_geometry
 	vision_msgs
 	camera_calibration_parsers)
-find_package(pcl REQUIRED)
+find_package(PCL REQUIRED)
+find_package(OpenCV REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS program_options system filesystem)
 
 catkin_package(INCLUDE_DIRS include
                LIBRARIES ${PROJECT_NAME} feature_matching)
 
-include_directories(${Boost_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${pcl_INCLUDE_DIRS} include)
+include_directories(${Boost_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} include)
 
 # LIBRARIES
 add_library(${PROJECT_NAME}
@@ -32,7 +32,7 @@ add_library(${PROJECT_NAME}
 	src/feature_extraction/key_points_filter.cpp
 	src/feature_extraction/features_io.cpp
 	)
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${pcl_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 
 add_library(feature_matching
 	src/feature_matching/matching_methods.cpp
@@ -40,7 +40,7 @@ add_library(feature_matching
 	src/feature_matching/stereo_depth_estimator.cpp
 	src/feature_matching/estimate_rigid_transformation.cpp
 	)
-target_link_libraries(feature_matching ${Boost_LIBRARIES} ${pcl_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
+target_link_libraries(feature_matching ${Boost_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 
 # EXECUTABLES
 add_executable(stereo_extractor src/tools/stereo_extractor.cpp)

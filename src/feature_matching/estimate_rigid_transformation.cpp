@@ -4,6 +4,7 @@
 #include <pcl/common/eigen.h>
 
 #include <pcl/registration/transformation_estimation_svd.h>
+#include <pcl/common/distances.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -41,8 +42,7 @@ void drawSamples_(const PointCloud& point_cloud, int nr_samples,
     bool valid_sample = true;
     for (size_t i = 0; i < sample_indices.size(); ++i)
     {
-      float distance_between_samples = 
-        euclideanDistance(point_cloud.points[sample_index], point_cloud.points[sample_indices[i]]);
+      float distance_between_samples = pcl::euclideanDistance(point_cloud.points[sample_index], point_cloud.points[sample_indices[i]]);
       if (sample_index == sample_indices[i] || distance_between_samples < min_sample_distance)
       {
         valid_sample = false;
@@ -138,7 +138,7 @@ bool feature_matching::estimateRigidTransformation(
   {
     const pcl::PointXYZ& transformed_point = source_cloud_transformed.points[i];
     const pcl::PointXYZ& corresponding_point = target_cloud.points[i];
-    float distance = euclideanDistance(transformed_point, corresponding_point);
+    float distance = pcl::euclideanDistance(transformed_point, corresponding_point);
     if (distance < inlier_threshold)
     {
       inlier_indices.push_back(i);
