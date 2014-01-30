@@ -1,5 +1,6 @@
 #include <boost/program_options.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <iostream>
 
 #include "feature_matching/stereo_feature_matcher.h"
 

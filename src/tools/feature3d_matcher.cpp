@@ -1,4 +1,5 @@
 #include <boost/program_options.hpp>
+#include <iostream>
 
 #include <opencv2/calib3d/calib3d.hpp>
 #include "feature_matching/matching_methods.h"
